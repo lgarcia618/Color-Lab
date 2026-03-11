@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>NX2 → Airtable · Color Lab</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap');
+
+:root {
+  --bg:      #0e0e0f;
+  --surface: #161618;
+  --surface2:#1e1e21;
+  --border:  #2a2a2e;
+  --accent:  #e8c547;
+  --accent2: #e87c47;
+  --text:    #f0ede6;
+  --muted:   #6b6b72;
+  --success: #4ade80;
+  --error:   #f87171;
+  --warn:    #fbbf24;
+  --radius:  12px;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+body {
+  background:var(--bg);
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:32px 16px 64px;
+}
+body::before {
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:.5;
+}
+
+.wrap{position:relative;z-index:1;width:100%;max-width:680px;}
+
+/* Header */
+header{margin-bottom:32px;}
+.eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;}
+h1{font-size:clamp(24px,5vw,38px);font-weight:300;letter-spacing:-.02em;line-height:1.1;}
+h1 span{color:var(--accent);font-weight:600;}
+
+/* API Key bar */
+.api-bar{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 16px;
+  display:flex;gap:10px;align-items:center;margin-bottom:24px;
+  flex-wrap:wrap;
+}
+.api-bar label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
+.api-bar input{
+  flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;
+  font-size:12px;outline:none;transition:border-color .15s;
+}
+.api-bar input:focus{border-color:var(--accent);}
+.api-bar input::placeholder{color:var(--muted);}
+.api-status{font-family:'DM Mono',monospace;font-size:10px;white-space:nowrap;}
+.api-status.ok{color:var(--success);}
+.api-status.missing{color:var(--muted);}
+
+/* Tabs */
+.tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:4px;margin-bottom:24px;}
+.tab{flex:1;padding:10px;border:none;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border-radius:9px;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.tab.active{background:var(--surface2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.4);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* Drop zone */
+.drop-zone{
+  border:1.5px dashed var(--border);border-radius:var(--radius);
+  padding:48px 24px;text-align:center;cursor:pointer;
+  transition:all .2s;background:var(--surface);position:relative;overflow:hidden;
+  margin-bottom:16px;
+}
+.drop-zone::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(232,197,71,.06) 0%,transparent 70%);pointer-events:none;}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:#1a1a1b;}
+.drop-zone.has-file{border-color:var(--success);border-style:solid;}
+.drop-icon{width:40px;height:40px;margin:0 auto 14px;opacity:.4;transition:opacity .2s;}
+.drop-zone:hover .drop-icon{opacity:.85;}
+.drop-label{font-size:14px;font-weight:500;margin-bottom:4px;}
+.drop-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
+.drop-filename{display:none;font-family:'DM Mono',monospace;font-size:12px;color:var(--success);margin-top:6px;}
+.drop-zone.has-file .drop-filename{display:block;}
+.drop-zone.has-file .drop-label{color:var(--success);}
+input[type=file]{display:none;}
+
+/* Scan zone */
+.scan-zone{
+  border:1.5px dashed var(--border);border-radius:var(--radius);
+  background:var(--surface);margin-bottom:16px;overflow:hidden;
+  position:relative;
+}
+.scan-zone::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(232,124,71,.06) 0%,transparent 70%);pointer-events:none;}
+.scan-inner{padding:40px 24px;text-align:center;cursor:pointer;transition:all .2s;}
+.scan-zone:hover .scan-inner{background:#1a1a1b;}
+.scan-icon{width:44px;height:44px;margin:0 auto 14px;opacity:.5;color:var(--accent2);}
+.scan-label{font-size:14px;font-weight:500;margin-bottom:4px;}
+.scan-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
+.preview-wrap{position:relative;display:none;}
+.preview-wrap.visible{display:block;}
+#imgPreview{width:100%;max-height:280px;object-fit:contain;display:block;border-radius:var(--radius) var(--radius) 0 0;}
+.preview-clear{
+  position:absolute;top:10px;right:10px;
+  background:rgba(0,0,0,.6);border:1px solid var(--border);
+  color:var(--text);border-radius:6px;padding:4px 10px;
+  font-size:11px;cursor:pointer;font-family:'DM Mono',monospace;
+}
+
+/* Extracted fields */
+.fields-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:20px;margin-bottom:16px;
+  display:none;
+}
+.fields-card.visible{display:block;}
+.fields-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:16px;}
+.field-row{display:grid;grid-template-columns:140px 1fr;gap:8px;align-items:center;margin-bottom:10px;}
+.field-row label{font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;}
+.field-row input,.field-row select{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:8px 12px;color:var(--text);
+  font-family:'DM Sans',sans-serif;font-size:13px;outline:none;
+  transition:border-color .15s;width:100%;
+}
+.field-row input:focus,.field-row select:focus{border-color:var(--accent);}
+.field-row select option{background:var(--surface2);}
+
+/* Buttons */
+.btn{
+  width:100%;padding:14px;background:var(--accent);color:#0e0e0f;
+  border:none;border-radius:var(--radius);font-family:'DM Sans',sans-serif;
+  font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px;
+}
+.btn:hover{background:#f0d060;transform:translateY(-1px);}
+.btn:active{transform:translateY(0);}
+.btn:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;transform:none;}
+.btn.secondary{background:transparent;color:var(--success);border:1.5px solid var(--success);}
+.btn.secondary:hover{background:rgba(74,222,128,.08);transform:translateY(-1px);}
+.btn.accent2{background:var(--accent2);color:#fff;}
+.btn.accent2:hover{background:#f0924f;}
+.btn.accent2:disabled{background:var(--border);color:var(--muted);}
+
+/* Log */
+.log{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px 20px;
+  font-family:'DM Mono',monospace;font-size:11px;line-height:1.9;
+  display:none;max-height:220px;overflow-y:auto;margin-bottom:12px;
+}
+.log.visible{display:block;}
+.ll{color:var(--muted);}
+.ll.ok{color:var(--success);}
+.ll.warn{color:var(--warn);}
+.ll.err{color:var(--error);}
+.ll.head{color:var(--text);font-weight:500;}
+
+/* Saved rows table */
+.saved-section{display:none;margin-top:8px;}
+.saved-section.visible{display:block;}
+.saved-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.saved-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;}
+.saved-row{
+  display:grid;grid-template-columns:1fr auto auto;gap:12px;
+  align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);
+  font-size:12px;
+}
+.saved-row:last-child{border-bottom:none;}
+.saved-row .title{font-family:'DM Mono',monospace;color:var(--text);}
+.saved-row .meta{color:var(--muted);font-size:11px;}
+.saved-row .del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;}
+.saved-row .del:hover{color:var(--error);}
+
+/* Spinner */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,.2);border-top-color:#0e0e0f;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Steps */
+.steps{margin-top:36px;border-top:1px solid var(--border);padding-top:28px;}
+.steps-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
+.step{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px;}
+.step-num{width:22px;height:22px;border-radius:50%;background:var(--surface);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);flex-shrink:0;margin-top:2px;}
+.step-text{font-size:12px;color:var(--muted);line-height:1.5;}
+.step-text strong{color:var(--text);font-weight:500;}
+
+.log::-webkit-scrollbar{width:3px;}
+.log::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">LRG by Design · Color Lab</div>
+  <h1>NX2 <span>→</span> Airtable</h1>
+</header>
+
+<!-- API Key -->
+<div class="api-bar">
+  <label>API Key</label>
+  <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false">
+  <span class="api-status missing" id="apiStatus">not set</span>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('convert')">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M5 7h6M5 10h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    NX2 Convert
+  </button>
+  <button class="tab" onclick="switchTab('scan')">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 5V3.5A1.5 1.5 0 013.5 2H5M11 2h1.5A1.5 1.5 0 0114 3.5V5M14 11v1.5A1.5 1.5 0 0112.5 14H11M5 14H3.5A1.5 1.5 0 012 12.5V11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.4"/></svg>
+    Scan Tag
+  </button>
+</div>
+
+<!-- Tab: NX2 Convert -->
+<div class="tab-panel active" id="panel-convert">
+  <div class="drop-zone" id="dropZone">
+    <svg class="drop-icon" viewBox="0 0 48 48" fill="none"><rect x="6" y="8" width="36" height="32" rx="4" stroke="currentColor" stroke-width="2"/><path d="M16 20h16M16 26h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M30 32l4-4-4-4" stroke="#e8c547" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="drop-label">Drop NX2 .xlsx file here</div>
+    <div class="drop-sub">or click to browse</div>
+    <div class="drop-filename" id="fileName"></div>
+    <input type="file" id="fileInput" accept=".xlsx,.xls">
+  </div>
+  <button class="btn" id="convertBtn" disabled>
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M10 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Convert to Airtable CSV
+  </button>
+  <div class="log" id="convertLog"></div>
+  <a class="btn secondary" id="convertDl" download="Airtable_Import.csv" style="display:none;text-decoration:none;">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 7l4 4 4-4M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Download CSV
+  </a>
+</div>
+
+<!-- Tab: Scan Tag -->
+<div class="tab-panel" id="panel-scan">
+
+  <div class="scan-zone" id="scanZone">
+    <div class="scan-inner" id="scanInner" onclick="document.getElementById('scanInput').click()">
+      <svg class="scan-icon" viewBox="0 0 48 48" fill="none"><rect x="4" y="10" width="40" height="30" rx="4" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="25" r="8" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="25" r="3" fill="currentColor" opacity=".4"/><path d="M16 10V7M32 10V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <div class="scan-label">Take or upload a photo of the plate tag</div>
+      <div class="scan-sub">tap to open camera · or drop image here</div>
+    </div>
+    <div class="preview-wrap" id="previewWrap">
+      <img id="imgPreview" src="" alt="Tag preview">
+      <button class="preview-clear" onclick="clearScan()">✕ clear</button>
+    </div>
+    <input type="file" id="scanInput" accept="image/*" capture="environment">
+  </div>
+
+  <button class="btn accent2" id="scanBtn" disabled>
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13 3L6 10.5 3 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Read Tag with AI
+  </button>
+
+  <div class="log" id="scanLog"></div>
+
+  <!-- Extracted fields -->
+  <div class="fields-card" id="fieldsCard">
+    <div class="fields-title">Extracted — confirm before saving</div>
+    <div class="field-row"><label>Plate ID</label><input id="f_plate_id" type="text" placeholder="JK-3037"></div>
+    <div class="field-row"><label>Plate Name</label><input id="f_plate_name" type="text" placeholder="Gold"></div>
+    <div class="field-row"><label>Series / Project</label><input id="f_series" type="text" placeholder="Nanotint"></div>
+    <div class="field-row"><label>Plate Type</label>
+      <select id="f_plate_type">
+        <option value="">— select —</option>
+        <option value="Gradient">Gradient</option>
+        <option value="Solid">Solid</option>
+      </select>
+    </div>
+    <div class="field-row"><label>Date / Batch</label><input id="f_date" type="text" placeholder="2024-03-06"></div>
+    <div class="field-row"><label>Notes</label><input id="f_notes" type="text" placeholder="Any extra info from tag"></div>
+  </div>
+
+  <button class="btn" id="saveRowBtn" style="display:none;" onclick="saveRow()">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Save to Export List
+  </button>
+
+  <!-- Saved rows -->
+  <div class="saved-section" id="savedSection">
+    <div class="saved-title">Saved tags — <span id="savedCount">0</span> plates</div>
+    <div class="saved-list" id="savedList"></div>
+    <a class="btn secondary" id="scanDl" download="Tag_Scan_Export.csv" style="display:none;text-decoration:none;">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 7l4 4 4-4M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Download All as CSV
+    </a>
+  </div>
+
+  <div class="steps">
+    <div class="steps-title">How it works</div>
+    <div class="step"><div class="step-num">1</div><div class="step-text">Tap the camera area — on your <strong>phone</strong> this opens your camera directly</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text">Claude Vision <strong>reads the tag</strong> and extracts Plate ID, Name, Series, Date</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Confirm or edit</strong> the extracted fields, then save to the export list</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Download CSV</strong> when done — import directly into Airtable Plate Registry</div></div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ── API Key ───────────────────────────────────────────────────────────────────
+const apiKeyInput = document.getElementById('apiKeyInput');
+const apiStatus   = document.getElementById('apiStatus');
+
+function getKey() { return apiKeyInput.value.trim() || localStorage.getItem('lrg_api_key') || ''; }
+
+apiKeyInput.addEventListener('input', () => {
+  const k = apiKeyInput.value.trim();
+  if (k) {
+    localStorage.setItem('lrg_api_key', k);
+    apiStatus.textContent = '✓ saved';
+    apiStatus.className = 'api-status ok';
+  } else {
+    localStorage.removeItem('lrg_api_key');
+    apiStatus.textContent = 'not set';
+    apiStatus.className = 'api-status missing';
+  }
+  updateScanBtn();
+});
+
+// Load saved key on startup
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('lrg_api_key');
+  if (saved) {
+    apiKeyInput.value = saved;
+    apiStatus.textContent = '✓ saved';
+    apiStatus.className = 'api-status ok';
+  }
+  updateScanBtn();
+});
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', ['convert','scan'][i] === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `panel-${name}`));
+}
+
+// ── NX2 Convert (same logic as v1) ───────────────────────────────────────────
+const ID_RE = /^([A-Z]{1,3})[_#\s](\d{2,4})(?:-(\d+))?/i;
+
+function cleanId(raw) {
+  const m = raw.trim().match(ID_RE);
+  if (!m) return raw.trim();
+  return `${m[1].toUpperCase()}-${m[2]}${m[3]?`-${m[3]}`:''}`;
+}
+function cleanName(raw) {
+  let s = raw.trim().replace(ID_RE,'').replace(/^[-–_\s]+/,'');
+  [/\s+replacement\s+for\s+\S+/gi,/\s+V\d{2}-V\d{2}.*$/gi,/\s+\+[\d.]+g.*$/gi,
+   /\s+from\s+alt\s+swatch.*$/gi,/\s*\([^)]*\)/g,/\s+MC\d+.*$/gi
+  ].forEach(p=>{ s=s.replace(p,''); });
+  s=s.replace(/[-–_\s]+$/,'').trim();
+  return s ? s.replace(/\b\w/g,c=>c.toUpperCase()) : raw.trim();
+}
+function pos(n){ return n<=2?'Light':n<=4?'Light-Mid':n===5?'Mid-Light':n===6?'Mid':n<=8?'Mid-Dark':n<=10?'Dark':'Darkest'; }
+function sv(v){ return (v==null||v==='---')?'':String(v); }
+const isHdr = r => r[0]==='Data Name';
+const isGrp = r => r[0] && !isHdr(r) && r.slice(1,8).every(v=>v==null);
+const isDat = r => r[0] && r[5]!=null;
+
+function flushPlate(rows, series) {
+  return rows.map((r,i)=>{
+    const n=i+1, sec=`S${String(n).padStart(2,'0')}`;
+    const pid=cleanId(r.raw), pname=cleanName(r.raw);
+    return {'Sample Title':`${pid} – ${pname} – ${sec}`,'Series / Project':series,
+      'Plate ID':pid,'Plate Name':pname,'Plate Type':'','Section':sec,'Section #':n,
+      'Position':pos(n),'L*':r.L,'a*':r.a,'b*':r.b,'ΔE00':r.dE,'ΔL*':r.dL,
+      'Δa*':r.da,'Δb*':r.db,'Judgement':r.judgement,'Group Traits':r.traits,
+      'Notes':rows.length!==11?'REVIEW: not 11 readings':''};
+  });
+}
+
+function parseNX2(wb) {
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:null});
+  const out=[];let series='',plateRows=[],prevPid=null;
+  rows.forEach(row=>{
+    const v=[...row.slice(0,10)]; while(v.length<10)v.push(null);
+    if(isHdr(v))return;
+    if(isGrp(v)){series=String(v[0]).trim().replace(/\b\w/g,c=>c.toUpperCase());return;}
+    if(isDat(v)){
+      const raw=String(v[0]).trim(), pid=cleanId(raw);
+      if(pid!==prevPid && plateRows.length){out.push(...flushPlate(plateRows,series));plateRows=[];}
+      prevPid=pid;
+      plateRows.push({raw,dE:sv(v[1]),dL:sv(v[2]),da:sv(v[3]),db:sv(v[4]),
+        L:sv(v[5]),a:sv(v[6]),b:sv(v[7]),judgement:sv(v[8]),traits:sv(v[9])});
+    }
+  });
+  if(plateRows.length)out.push(...flushPlate(plateRows,series));
+  return out;
+}
+
+const FIELDS=['Sample Title','Series / Project','Plate ID','Plate Name','Plate Type',
+  'Section','Section #','Position','L*','a*','b*','ΔE00','ΔL*','Δa*','Δb*','Judgement','Group Traits','Notes'];
+
+function toCSV(records, fields) {
+  const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  return [fields.map(esc).join(','), ...records.map(r=>fields.map(f=>esc(r[f]??'')).join(','))].join('\r\n');
+}
+
+// Convert tab wiring
+const dropZone=document.getElementById('dropZone'),fileInput=document.getElementById('fileInput');
+const convertBtn=document.getElementById('convertBtn'),convertLog=document.getElementById('convertLog');
+const convertDl=document.getElementById('convertDl'),fileName=document.getElementById('fileName');
+let nx2File=null;
+
+function clog(msg,type='ll'){
+  const d=document.createElement('div'); d.className=`ll ${type}`; d.textContent=msg;
+  convertLog.appendChild(d); convertLog.scrollTop=convertLog.scrollHeight;
+}
+
+function setNX2File(f){
+  if(!f||!f.name.match(/\.xlsx?$/i))return;
+  nx2File=f; fileName.textContent=f.name;
+  dropZone.classList.add('has-file'); convertBtn.disabled=false;
+  convertDl.style.display='none'; convertLog.innerHTML=''; convertLog.classList.remove('visible');
+}
+
+dropZone.addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',e=>setNX2File(e.target.files[0]));
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');setNX2File(e.dataTransfer.files[0]);});
+
+convertBtn.addEventListener('click',()=>{
+  if(!nx2File)return;
+  convertLog.innerHTML=''; convertLog.classList.add('visible'); convertDl.style.display='none';
+  clog(`→ Reading ${nx2File.name}…`,'head');
+  const r=new FileReader();
+  r.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      clog(`✓ Sheet: ${wb.SheetNames[0]}`,'ok');
+      const recs=parseNX2(wb);
+      clog(`✓ ${recs.length} section records parsed`,'ok');
+      const plates={};
+      recs.forEach(r=>{if(!plates[r['Plate ID']])plates[r['Plate ID']]=0;plates[r['Plate ID']]++;});
+      Object.entries(plates).forEach(([pid,c])=>{
+        clog(`  ${pid} → ${c} section${c>1?'s':''}${c!==11?' ⚠':''}`  ,c!==11?'warn':'ll');
+      });
+      const rev=recs.filter(r=>r.Notes).length;
+      if(rev)clog(`⚠ ${rev} row(s) flagged for review`,'warn');
+      const csv=toCSV(recs,FIELDS);
+      const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      convertDl.href=URL.createObjectURL(blob);
+      convertDl.style.display='flex';
+      clog('✓ Ready — click Download','ok');
+    }catch(err){clog(`✗ ${err.message}`,'err');}
+  };
+  r.readAsArrayBuffer(nx2File);
+});
+
+// ── Scan Tag ──────────────────────────────────────────────────────────────────
+const scanInput=document.getElementById('scanInput');
+const scanBtn=document.getElementById('scanBtn');
+const scanLog=document.getElementById('scanLog');
+const fieldsCard=document.getElementById('fieldsCard');
+const saveRowBtn=document.getElementById('saveRowBtn');
+const previewWrap=document.getElementById('previewWrap');
+const imgPreview=document.getElementById('imgPreview');
+const scanZone=document.getElementById('scanZone');
+const scanInner=document.getElementById('scanInner');
+let scanImageB64=null, scanImageType=null;
+let savedRows=[];
+
+function updateScanBtn(){ scanBtn.disabled=!scanImageB64||!getKey(); }
+
+function slog(msg,type='ll'){
+  const d=document.createElement('div'); d.className=`ll ${type}`; d.textContent=msg;
+  scanLog.appendChild(d); scanLog.scrollTop=scanLog.scrollHeight;
+}
+
+function clearScan(){
+  scanImageB64=null; scanImageType=null;
+  previewWrap.classList.remove('visible');
+  scanInner.style.display='block';
+  fieldsCard.classList.remove('visible');
+  saveRowBtn.style.display='none';
+  scanLog.innerHTML=''; scanLog.classList.remove('visible');
+  updateScanBtn();
+}
+
+scanInput.addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const dataUrl=ev.target.result;
+    imgPreview.src=dataUrl;
+    previewWrap.classList.add('visible');
+    scanInner.style.display='none';
+    // extract base64
+    const parts=dataUrl.split(',');
+    scanImageType=f.type||'image/jpeg';
+    scanImageB64=parts[1];
+    updateScanBtn();
+  };
+  reader.readAsDataURL(f);
+});
+
+// Drag-drop image onto scan zone
+scanZone.addEventListener('dragover',e=>{e.preventDefault();scanZone.style.borderColor='var(--accent2)';});
+scanZone.addEventListener('dragleave',()=>scanZone.style.borderColor='');
+scanZone.addEventListener('drop',e=>{
+  e.preventDefault(); scanZone.style.borderColor='';
+  const f=e.dataTransfer.files[0];
+  if(f&&f.type.startsWith('image/')){
+    const dt=new DataTransfer(); dt.items.add(f);
+    scanInput.files=dt.files;
+    scanInput.dispatchEvent(new Event('change'));
+  }
+});
+
+scanBtn.addEventListener('click', async ()=>{
+  const key=getKey();
+  if(!key||!scanImageB64){return;}
+  scanLog.innerHTML=''; scanLog.classList.add('visible');
+  fieldsCard.classList.remove('visible');
+  saveRowBtn.style.display='none';
+  scanBtn.disabled=true;
+  scanBtn.innerHTML='<span class="spinner"></span> Reading tag…';
+  slog('→ Sending image to Claude Vision…','head');
+
+  const prompt=`You are reading a physical color sample plate tag or label. Extract the following fields and return ONLY a JSON object with these keys (use empty string if not found):
+- plate_id: The plate/sample ID code (e.g. JK-3037, DR-08-2, E-02)
+- plate_name: Short color description or name (e.g. Gold, Skin Pink, Mud Base)
+- series: Project or series name (e.g. Nanotint, EROS, Dogs with Rabbit)
+- date: Any date or batch number visible
+- notes: Any other relevant text on the label
+
+Return ONLY the JSON object, no explanation, no markdown.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:400,
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:scanImageType,data:scanImageB64}},
+          {type:'text',text:prompt}
+        ]}]
+      })
+    });
+    const data=await resp.json();
+    if(!resp.ok){slog(`✗ API error: ${data.error?.message||resp.status}`,'err');return;}
+    const raw=data.content.find(b=>b.type==='text')?.text||'';
+    slog('✓ Response received','ok');
+    const clean=raw.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+    document.getElementById('f_plate_id').value=parsed.plate_id||'';
+    document.getElementById('f_plate_name').value=parsed.plate_name||'';
+    document.getElementById('f_series').value=parsed.series||'';
+    document.getElementById('f_plate_type').value='';
+    document.getElementById('f_date').value=parsed.date||'';
+    document.getElementById('f_notes').value=parsed.notes||'';
+    fieldsCard.classList.add('visible');
+    saveRowBtn.style.display='flex';
+    slog('✓ Fields extracted — review and save below','ok');
+  } catch(err){
+    slog(`✗ ${err.message}`,'err');
+  } finally {
+    scanBtn.disabled=false;
+    scanBtn.innerHTML='<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13 3L6 10.5 3 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Read Tag with AI';
+    updateScanBtn();
+  }
+});
+
+// Save row
+function saveRow(){
+  const row={
+    'Plate ID':document.getElementById('f_plate_id').value,
+    'Plate Name':document.getElementById('f_plate_name').value,
+    'Series / Project':document.getElementById('f_series').value,
+    'Plate Type':document.getElementById('f_plate_type').value,
+    'Date / Batch':document.getElementById('f_date').value,
+    'Substrate / Base':'',
+    'Total Sections':11,
+    'Status':'Active',
+    'Notes':document.getElementById('f_notes').value,
+  };
+  savedRows.push(row);
+  renderSaved();
+  clearScan();
+  slog(`✓ Saved: ${row['Plate ID']} – ${row['Plate Name']}`,'ok');
+  scanLog.classList.add('visible');
+}
+
+function renderSaved(){
+  const list=document.getElementById('savedList');
+  const sec=document.getElementById('savedSection');
+  const countEl=document.getElementById('savedCount');
+  const dlBtn=document.getElementById('scanDl');
+  if(!savedRows.length){sec.classList.remove('visible');return;}
+  sec.classList.add('visible');
+  countEl.textContent=savedRows.length;
+  list.innerHTML=savedRows.map((r,i)=>`
+    <div class="saved-row">
+      <div>
+        <div class="title">${r['Plate ID']} – ${r['Plate Name']}</div>
+        <div class="meta">${r['Series / Project']||'—'} · ${r['Plate Type']||'—'} · ${r['Date / Batch']||'—'}</div>
+      </div>
+      <button class="del" onclick="deleteRow(${i})">✕</button>
+    </div>`).join('');
+  const SCAN_FIELDS=['Plate ID','Plate Name','Series / Project','Plate Type','Date / Batch','Substrate / Base','Total Sections','Status','Notes'];
+  const csv=toCSV(savedRows,SCAN_FIELDS);
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  dlBtn.href=URL.createObjectURL(blob);
+  dlBtn.style.display='flex';
+}
+
+function deleteRow(i){savedRows.splice(i,1);renderSaved();}
+</script>
+</body>
+</html>
