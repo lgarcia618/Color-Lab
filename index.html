@@ -210,7 +210,9 @@ input[type=file]{display:none;}
   <label>API Key</label>
   <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-…" autocomplete="off" spellcheck="false">
   <span class="api-status missing" id="apiStatus">not set</span>
+  <button onclick="testKey()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap;transition:all .15s;" id="testKeyBtn">Test Key</button>
 </div>
+<div id="keyTestResult" style="display:none;font-family:'DM Mono',monospace;font-size:11px;padding:8px 12px;border-radius:8px;margin-bottom:12px;"></div>
 
 <!-- Tabs -->
 <div class="tabs">
@@ -340,6 +342,7 @@ window.addEventListener('DOMContentLoaded', () => {
     apiStatus.className = 'api-status ok';
   }
   updateScanBtn();
+  renderSaved();
 });
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -472,9 +475,52 @@ const imgPreview=document.getElementById('imgPreview');
 const scanZone=document.getElementById('scanZone');
 const scanInner=document.getElementById('scanInner');
 let scanImageB64=null, scanImageType=null;
-let savedRows=[];
+// Load persisted rows from localStorage on startup
+let savedRows = JSON.parse(localStorage.getItem('lrg_saved_rows') || '[]');
+
+function persistRows() {
+  try { localStorage.setItem('lrg_saved_rows', JSON.stringify(savedRows)); } catch(e) {}
+}
 
 function updateScanBtn(){ scanBtn.disabled=!scanImageB64||!getKey(); }
+
+async function testKey(){
+  const key=getKey();
+  const resultEl=document.getElementById('keyTestResult');
+  const btn=document.getElementById('testKeyBtn');
+  if(!key){
+    resultEl.style.display='block';
+    resultEl.style.background='rgba(248,113,113,0.1)';
+    resultEl.style.color='var(--error)';
+    resultEl.textContent='✗ No API key entered';
+    return;
+  }
+  btn.textContent='Testing…';
+  resultEl.style.display='none';
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,messages:[{role:'user',content:'hi'}]})
+    });
+    const data=await resp.json();
+    resultEl.style.display='block';
+    if(resp.ok){
+      resultEl.style.background='rgba(74,222,128,0.1)';
+      resultEl.style.color='var(--success)';
+      resultEl.textContent='✓ API key is valid and working';
+    } else {
+      resultEl.style.background='rgba(248,113,113,0.1)';
+      resultEl.style.color='var(--error)';
+      resultEl.textContent=`✗ ${resp.status}: ${data.error?.message||'Invalid key'}`;
+    }
+  }catch(err){
+    resultEl.style.display='block';
+    resultEl.style.background='rgba(248,113,113,0.1)';
+    resultEl.style.color='var(--error)';
+    resultEl.textContent=`✗ Network error: ${err.message}`;
+  } finally { btn.textContent='Test Key'; }
+}
 
 function slog(msg,type='ll'){
   const d=document.createElement('div'); d.className=`ll ${type}`; d.textContent=msg;
@@ -554,7 +600,16 @@ Return ONLY the JSON object, no explanation, no markdown.`;
       })
     });
     const data=await resp.json();
-    if(!resp.ok){slog(`✗ API error: ${data.error?.message||resp.status}`,'err');return;}
+    if(!resp.ok){
+      const errMsg = data.error?.message || JSON.stringify(data.error) || `HTTP ${resp.status}`;
+      const errType = data.error?.type || '';
+      slog(`✗ API error (${resp.status}): ${errMsg}`,'err');
+      if(resp.status===401) slog('→ Check your API key — it may be incorrect or expired','warn');
+      if(resp.status===400) slog('→ Bad request — image may be too large, try a smaller photo','warn');
+      if(resp.status===529||resp.status===529) slog('→ API overloaded — wait a moment and try again','warn');
+      slog(`Full error: ${JSON.stringify(data)}`,'warn');
+      return;
+    }
     const raw=data.content.find(b=>b.type==='text')?.text||'';
     slog('✓ Response received','ok');
     const clean=raw.replace(/```json|```/g,'').trim();
@@ -591,6 +646,7 @@ function saveRow(){
     'Notes':document.getElementById('f_notes').value,
   };
   savedRows.push(row);
+  persistRows();
   renderSaved();
   clearScan();
   slog(`✓ Saved: ${row['Plate ID']} – ${row['Plate Name']}`,'ok');
@@ -618,9 +674,21 @@ function renderSaved(){
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
   dlBtn.href=URL.createObjectURL(blob);
   dlBtn.style.display='flex';
+  // show clear all if not already there
+  if(!document.getElementById('clearAllBtn')){
+    const clr=document.createElement('button');
+    clr.id='clearAllBtn';
+    clr.textContent='Clear All';
+    clr.style.cssText='width:100%;margin-top:8px;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:var(--radius);font-family:"DM Sans",sans-serif;font-size:13px;cursor:pointer;transition:all .15s;';
+    clr.onmouseenter=()=>clr.style.color='var(--error)';
+    clr.onmouseleave=()=>clr.style.color='var(--muted)';
+    clr.onclick=clearAllRows;
+    document.getElementById('savedSection').appendChild(clr);
+  }
 }
 
-function deleteRow(i){savedRows.splice(i,1);renderSaved();}
+function deleteRow(i){savedRows.splice(i,1);persistRows();renderSaved();}
+function clearAllRows(){if(confirm(`Delete all ${savedRows.length} saved rows?`)){savedRows=[];persistRows();renderSaved();}}
 </script>
 </body>
 </html>
