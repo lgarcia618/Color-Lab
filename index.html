@@ -439,8 +439,8 @@ const FIELDS=['Sample Title','Series / Project','Plate ID','Plate Name','Plate T
   'Section','Section #','Position','L*','a*','b*','ΔE00','ΔL*','Δa*','Δb*','Judgement','Group Traits','Notes'];
 
 function toCSV(records, fields) {
-  const esc=v=>`"${String(v??'').replace(/"/g,'""')}"`;
-  return [fields.map(esc).join(','), ...records.map(r=>fields.map(f=>esc(r[f]??'')).join(','))].join('\r\n');
+  const esc=v=>`"${String(v!=null?v:'').replace(/"/g,'""')}"`;
+  return [fields.map(esc).join(','), ...records.map(r=>fields.map(f=>esc(r[f]!=null?r[f]:'')).join(','))].join('\r\n');
 }
 
 // Convert tab wiring
@@ -467,12 +467,12 @@ dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.a
 dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');setNX2File(e.dataTransfer.files[0]);});
 
-convertBtn.addEventListener('click',()=>{
+convertBtn.addEventListener('click', async () => {
   if(!nx2File)return;
   convertLog.innerHTML=''; convertLog.classList.add('visible'); convertDl.style.display='none';
   clog(`→ Reading ${nx2File.name}…`,'head');
   const r=new FileReader();
-  r.onload=e=>{
+  r.onload=async e=>{
     try{
       const wb=XLSX.read(e.target.result,{type:'array'});
       clog(`✓ Sheet: ${wb.SheetNames[0]}`,'ok');
@@ -495,7 +495,7 @@ convertBtn.addEventListener('click',()=>{
         clog('→ Appending to Color Library sheet…','ll');
         try {
           for (const rec of recs) {
-            await appendToSheet('lrg_sheet_library', LIBRARY_HEADERS.map(h => rec[h] ?? ''));
+            await appendToSheet('lrg_sheet_library', LIBRARY_HEADERS.map(h => rec[h] != null ? rec[h] : ''));
           }
           clog(`✓ ${recs.length} rows appended to Color Library sheet`,'ok');
         } catch(e) { clog(`⚠ Sheet append failed: ${e.message}`,'warn'); }
@@ -827,8 +827,8 @@ Return ONLY the JSON object, no explanation, no markdown.`;
         })
       });
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error?.message || `HTTP ${resp.status}`);
-      const raw = data.content.find(b => b.type === 'text')?.text || '';
+      if (!resp.ok) throw new Error(data.error && data.error.message || `HTTP ${resp.status}`);
+      const raw = data.content.find(function(b){return b.type==='text'}) ? .find(function(b){return b.type==='text'}).text : '';
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
 
       const pid   = parsed.plate_id || `PLATE-${i+1}`;
@@ -869,7 +869,7 @@ Return ONLY the JSON object, no explanation, no markdown.`;
       // Append to Plate Registry sheet
       if (driveToken) {
         try {
-          await appendToSheet('lrg_sheet_registry', REGISTRY_HEADERS.map(h => row[h] ?? ''));
+          await appendToSheet('lrg_sheet_registry', REGISTRY_HEADERS.map(h => row[h] != null ? row[h] : ''));
           slog(`  ↗ Added to Plate Registry sheet`, 'ok');
         } catch(e) { slog(`  ⚠ Sheet append failed: ${e.message}`, 'warn'); }
       }
