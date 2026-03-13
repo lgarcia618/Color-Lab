@@ -249,65 +249,79 @@ input[type=file]{display:none;}
 <!-- Tab: Scan Tag -->
 <div class="tab-panel" id="panel-scan">
 
+  <!-- Google Drive bar -->
+  <div class="api-bar" id="driveBar">
+    <label>Google Drive</label>
+    <span class="api-status" id="driveStatus" style="color:var(--muted);">not connected</span>
+    <button id="driveConnectBtn" onclick="connectDrive()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap;transition:all .15s;">Connect Drive</button>
+    <button id="driveDisconnectBtn" onclick="disconnectDrive()" style="display:none;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap;">Disconnect</button>
+  </div>
+  <div id="driveFolderBar" style="display:none;" class="api-bar">
+    <label>Drive Folder</label>
+    <input type="text" id="driveFolderName" placeholder="Color Lab Tag Photos" value="Color Lab Tag Photos"
+      style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none;">
+    <span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);">folder name in Drive</span>
+  </div>
+
+  <!-- Multi-image drop zone -->
   <div class="scan-zone" id="scanZone">
     <div class="scan-inner" id="scanInner" onclick="document.getElementById('scanInput').click()">
       <svg class="scan-icon" viewBox="0 0 48 48" fill="none"><rect x="4" y="10" width="40" height="30" rx="4" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="25" r="8" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="25" r="3" fill="currentColor" opacity=".4"/><path d="M16 10V7M32 10V7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      <div class="scan-label">Take or upload a photo of the plate tag</div>
-      <div class="scan-sub">tap to open camera · or drop image here</div>
+      <div class="scan-label">Drop tag photos here or tap to select</div>
+      <div class="scan-sub">select multiple images at once · jpg, png, heic</div>
     </div>
-    <div class="preview-wrap" id="previewWrap">
-      <img id="imgPreview" src="" alt="Tag preview">
-      <button class="preview-clear" onclick="clearScan()">✕ clear</button>
+    <input type="file" id="scanInput" accept="image/*" multiple>
+  </div>
+
+  <!-- Queue preview -->
+  <div id="queueSection" style="display:none;margin-bottom:16px;">
+    <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">
+      <span id="queueCount">0</span> images queued
+      <button onclick="clearQueue()" style="margin-left:12px;background:none;border:none;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;">✕ clear</button>
     </div>
-    <input type="file" id="scanInput" accept="image/*" capture="environment">
+    <div id="queueGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;"></div>
   </div>
 
   <button class="btn accent2" id="scanBtn" disabled>
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13 3L6 10.5 3 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    Read Tag with AI
+    Scan All Tags with AI
   </button>
+
+  <!-- Progress -->
+  <div id="progressSection" style="display:none;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);" id="progressLabel">Processing…</span>
+      <span style="font-family:'DM Mono',monospace;font-size:10px;color:var(--accent);" id="progressFraction">0/0</span>
+    </div>
+    <div style="background:var(--surface);border-radius:4px;height:4px;overflow:hidden;">
+      <div id="progressBar" style="height:100%;background:var(--accent);width:0%;transition:width .3s;border-radius:4px;"></div>
+    </div>
+  </div>
 
   <div class="log" id="scanLog"></div>
 
-  <!-- Extracted fields -->
-  <div class="fields-card" id="fieldsCard">
-    <div class="fields-title">Extracted — confirm before saving</div>
-    <div class="field-row"><label>Plate ID</label><input id="f_plate_id" type="text" placeholder="JK-3037"></div>
-    <div class="field-row"><label>Plate Name</label><input id="f_plate_name" type="text" placeholder="Gold"></div>
-    <div class="field-row"><label>Series / Project</label><input id="f_series" type="text" placeholder="Nanotint"></div>
-    <div class="field-row"><label>Plate Type</label>
-      <select id="f_plate_type">
-        <option value="">— select —</option>
-        <option value="Gradient">Gradient</option>
-        <option value="Solid">Solid</option>
-      </select>
-    </div>
-    <div class="field-row"><label>Date / Batch</label><input id="f_date" type="text" placeholder="2024-03-06"></div>
-    <div class="field-row"><label>Notes</label><input id="f_notes" type="text" placeholder="Any extra info from tag"></div>
-  </div>
-
-  <button class="btn" id="saveRowBtn" style="display:none;" onclick="saveRow()">
-    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    Save to Export List
-  </button>
-
-  <!-- Saved rows -->
+  <!-- Results list -->
   <div class="saved-section" id="savedSection">
-    <div class="saved-title">Saved tags — <span id="savedCount">0</span> plates</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="saved-title" style="margin-bottom:0;">Saved tags — <span id="savedCount">0</span> plates</div>
+      <button onclick="clearAllRows()" style="background:none;border:none;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;">Clear All</button>
+    </div>
     <div class="saved-list" id="savedList"></div>
-    <a class="btn secondary" id="scanDl" download="Tag_Scan_Export.csv" style="display:none;text-decoration:none;">
+    <a class="btn secondary" id="scanDl" download="Tag_Scan_Export.csv" style="display:none;margin-top:12px;text-decoration:none;">
       <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 7l4 4 4-4M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Download All as CSV
+      Download CSV
     </a>
   </div>
 
   <div class="steps">
     <div class="steps-title">How it works</div>
-    <div class="step"><div class="step-num">1</div><div class="step-text">Tap the camera area — on your <strong>phone</strong> this opens your camera directly</div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text">Claude Vision <strong>reads the tag</strong> and extracts Plate ID, Name, Series, Date</div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Confirm or edit</strong> the extracted fields, then save to the export list</div></div>
-    <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Download CSV</strong> when done — import directly into Airtable Plate Registry</div></div>
+    <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Connect Google Drive</strong> once — images will upload to a named folder automatically</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Select multiple tag photos</strong> at once — from camera roll or file browser</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text">Claude <strong>reads each tag</strong> automatically, one by one</div></div>
+    <div class="step"><div class="step-num">4</div><div class="step-text">Each image is <strong>renamed and uploaded to Drive</strong> using the extracted plate title (e.g. JK-3037_Gold.jpg)</div></div>
+    <div class="step"><div class="step-num">5</div><div class="step-text"><strong>Review the results list</strong>, edit any row, then download CSV for Airtable</div></div>
   </div>
+
 </div>
 
 </div><!-- /wrap -->
@@ -464,17 +478,268 @@ convertBtn.addEventListener('click',()=>{
   r.readAsArrayBuffer(nx2File);
 });
 
-// ── Scan Tag ──────────────────────────────────────────────────────────────────
-const scanInput=document.getElementById('scanInput');
-const scanBtn=document.getElementById('scanBtn');
-const scanLog=document.getElementById('scanLog');
-const fieldsCard=document.getElementById('fieldsCard');
-const saveRowBtn=document.getElementById('saveRowBtn');
-const previewWrap=document.getElementById('previewWrap');
-const imgPreview=document.getElementById('imgPreview');
-const scanZone=document.getElementById('scanZone');
-const scanInner=document.getElementById('scanInner');
-let scanImageB64=null, scanImageType=null;
+
+// ── Google Drive OAuth ────────────────────────────────────────────────────────
+// Uses Google Identity Services + Drive API v3
+// Client ID is public-facing — safe to include in frontend code
+const GDRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+let driveToken = null;
+let driveFolderId = null;
+
+function loadGoogleSDK(cb) {
+  if (window.google && window.google.accounts) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+function connectDrive() {
+  const clientId = localStorage.getItem('lrg_gclient_id');
+  if (!clientId) {
+    const id = prompt(
+      'Enter your Google OAuth Client ID.\n\n' +
+      'Get one free at: console.cloud.google.com\n' +
+      'Create project → Enable Drive API → Credentials → OAuth 2.0 Client ID (Web)\n' +
+      'Add your GitHub Pages URL as an Authorized JavaScript origin.'
+    );
+    if (!id) return;
+    localStorage.setItem('lrg_gclient_id', id.trim());
+  }
+  loadGoogleSDK(() => {
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: localStorage.getItem('lrg_gclient_id'),
+      scope: GDRIVE_SCOPE,
+      callback: (resp) => {
+        if (resp.error) { slog('✗ Drive auth failed: ' + resp.error, 'err'); return; }
+        driveToken = resp.access_token;
+        localStorage.setItem('lrg_drive_token', driveToken);
+        updateDriveUI(true);
+        slog('✓ Google Drive connected', 'ok');
+        scanLog.classList.add('visible');
+      }
+    });
+    client.requestAccessToken();
+  });
+}
+
+function disconnectDrive() {
+  driveToken = null; driveFolderId = null;
+  localStorage.removeItem('lrg_drive_token');
+  updateDriveUI(false);
+}
+
+function updateDriveUI(connected) {
+  document.getElementById('driveStatus').textContent = connected ? '✓ connected' : 'not connected';
+  document.getElementById('driveStatus').style.color = connected ? 'var(--success)' : 'var(--muted)';
+  document.getElementById('driveConnectBtn').style.display = connected ? 'none' : 'block';
+  document.getElementById('driveDisconnectBtn').style.display = connected ? 'block' : 'none';
+  document.getElementById('driveFolderBar').style.display = connected ? 'flex' : 'none';
+}
+
+async function getOrCreateFolder(name) {
+  if (driveFolderId) return driveFolderId;
+  // Search for existing folder
+  const q = encodeURIComponent(`name='${name}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+    headers: { Authorization: `Bearer ${driveToken}` }
+  });
+  const data = await res.json();
+  if (data.files && data.files.length > 0) {
+    driveFolderId = data.files[0].id;
+    return driveFolderId;
+  }
+  // Create new folder
+  const create = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${driveToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder' })
+  });
+  const folder = await create.json();
+  driveFolderId = folder.id;
+  return driveFolderId;
+}
+
+async function uploadToDrive(b64, mimeType, filename) {
+  const folderName = document.getElementById('driveFolderName').value.trim() || 'Color Lab Tag Photos';
+  const folderId = await getOrCreateFolder(folderName);
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: mimeType });
+  const meta = JSON.stringify({ name: filename, parents: [folderId] });
+  const form = new FormData();
+  form.append('metadata', new Blob([meta], { type: 'application/json' }));
+  form.append('file', blob);
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${driveToken}` },
+    body: form
+  });
+  return await res.json();
+}
+
+// ── Image queue ───────────────────────────────────────────────────────────────
+let imageQueue = []; // [{file, b64, mimeType, previewUrl}]
+
+document.getElementById('scanInput').addEventListener('change', e => {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target.result;
+      const b64 = dataUrl.split(',')[1];
+      imageQueue.push({ file, b64, mimeType: file.type || 'image/jpeg', previewUrl: dataUrl, status: 'pending' });
+      renderQueue();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+});
+
+// Drag drop on scan zone
+const scanZoneEl = document.getElementById('scanZone');
+scanZoneEl.addEventListener('dragover', e => { e.preventDefault(); scanZoneEl.style.borderColor = 'var(--accent2)'; });
+scanZoneEl.addEventListener('dragleave', () => scanZoneEl.style.borderColor = '');
+scanZoneEl.addEventListener('drop', e => {
+  e.preventDefault(); scanZoneEl.style.borderColor = '';
+  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      imageQueue.push({ file, b64: ev.target.result.split(',')[1], mimeType: file.type, previewUrl: ev.target.result, status: 'pending' });
+      renderQueue();
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+function renderQueue() {
+  const sec = document.getElementById('queueSection');
+  const grid = document.getElementById('queueGrid');
+  const count = document.getElementById('queueCount');
+  const btn = document.getElementById('scanBtn');
+  if (!imageQueue.length) { sec.style.display = 'none'; btn.disabled = true; return; }
+  sec.style.display = 'block';
+  count.textContent = imageQueue.length;
+  btn.disabled = !getKey();
+  grid.innerHTML = imageQueue.map((img, i) => `
+    <div style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;background:var(--surface);">
+      <img src="${img.previewUrl}" style="width:100%;height:100%;object-fit:cover;display:block;">
+      <div style="position:absolute;inset:0;background:rgba(0,0,0,${img.status==='done'?'.5':img.status==='error'?'.6':'0'});display:flex;align-items:center;justify-content:center;font-size:18px;">
+        ${img.status==='done'?'✓':img.status==='error'?'✗':img.status==='processing'?'<div class="spinner" style="border-color:rgba(255,255,255,.3);border-top-color:#fff;"></div>':''}
+      </div>
+      ${img.status==='pending'?`<button onclick="removeFromQueue(${i})" style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.6);border:none;color:white;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>`:''}
+    </div>`).join('');
+}
+
+function removeFromQueue(i) { imageQueue.splice(i, 1); renderQueue(); }
+function clearQueue() { imageQueue = []; renderQueue(); }
+
+// ── Batch scan ────────────────────────────────────────────────────────────────
+document.getElementById('scanBtn').addEventListener('click', async () => {
+  if (!imageQueue.length || !getKey()) return;
+  const key = getKey();
+  const total = imageQueue.filter(i => i.status === 'pending').length;
+  let done = 0;
+
+  scanLog.innerHTML = ''; scanLog.classList.add('visible');
+  document.getElementById('progressSection').style.display = 'block';
+  document.getElementById('scanBtn').disabled = true;
+  slog(`→ Processing ${total} image${total>1?'s':''}…`, 'head');
+
+  const prompt = `You are reading a physical color sample plate tag or label. Extract the following fields and return ONLY a JSON object with these exact keys (use empty string if not found):
+- plate_id: The plate/sample ID code (e.g. JK-3037, DR-08-2, E-02)
+- plate_name: Short color description (e.g. Gold, Skin Pink, Mud Base)
+- series: Project or series name (e.g. Nanotint, EROS, Dogs with Rabbit)
+- date: Any date or batch number visible
+- notes: Any other relevant text on the label
+Return ONLY the JSON object, no explanation, no markdown.`;
+
+  for (let i = 0; i < imageQueue.length; i++) {
+    const img = imageQueue[i];
+    if (img.status !== 'pending') continue;
+
+    img.status = 'processing';
+    renderQueue();
+    document.getElementById('progressLabel').textContent = `Processing ${done + 1} of ${total}…`;
+    document.getElementById('progressFraction').textContent = `${done}/${total}`;
+    document.getElementById('progressBar').style.width = `${(done / total) * 100}%`;
+
+    try {
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 400,
+          messages: [{ role: 'user', content: [
+            { type: 'image', source: { type: 'base64', media_type: img.mimeType, data: img.b64 } },
+            { type: 'text', text: prompt }
+          ]}]
+        })
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error?.message || `HTTP ${resp.status}`);
+      const raw = data.content.find(b => b.type === 'text')?.text || '';
+      const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+      const pid   = parsed.plate_id || `PLATE-${i+1}`;
+      const pname = parsed.plate_name || 'Unknown';
+      const ext   = img.file.name.split('.').pop() || 'jpg';
+      const filename = `${pid}_${pname.replace(/\s+/g,'_')}.${ext}`;
+
+      // Upload to Drive if connected
+      let driveLink = '';
+      if (driveToken) {
+        try {
+          slog(`  ↑ Uploading ${filename} to Drive…`, 'll');
+          const uploaded = await uploadToDrive(img.b64, img.mimeType, filename);
+          driveLink = uploaded.webViewLink || '';
+          slog(`  ✓ Saved to Drive: ${filename}`, 'ok');
+        } catch(de) {
+          slog(`  ⚠ Drive upload failed: ${de.message}`, 'warn');
+        }
+      }
+
+      const row = {
+        'Plate ID':         pid,
+        'Plate Name':       pname,
+        'Series / Project': parsed.series || '',
+        'Plate Type':       '',
+        'Date / Batch':     parsed.date || '',
+        'Substrate / Base': '',
+        'Total Sections':   11,
+        'Status':           'Active',
+        'Notes':            parsed.notes || '',
+        'Image File':       filename,
+        'Drive Link':       driveLink,
+      };
+      savedRows.push(row);
+      persistRows();
+      img.status = 'done';
+      slog(`✓ ${pid} – ${pname}`, 'ok');
+    } catch(err) {
+      img.status = 'error';
+      slog(`✗ Image ${i+1}: ${err.message}`, 'err');
+    }
+
+    done++;
+    renderQueue();
+    renderSaved();
+    // Small delay between API calls to avoid rate limiting
+    if (i < imageQueue.length - 1) await new Promise(r => setTimeout(r, 400));
+  }
+
+  document.getElementById('progressBar').style.width = '100%';
+  document.getElementById('progressLabel').textContent = `Done — ${done} processed`;
+  document.getElementById('progressFraction').textContent = `${done}/${total}`;
+  document.getElementById('scanBtn').disabled = false;
+  slog(`✓ Batch complete — ${done} tag${done>1?'s':''} processed`, 'ok');
+});
+
+// ── Saved rows (updated to include image/drive fields) ────────────────────────
 // Load persisted rows from localStorage on startup
 let savedRows = JSON.parse(localStorage.getItem('lrg_saved_rows') || '[]');
 
@@ -482,213 +747,48 @@ function persistRows() {
   try { localStorage.setItem('lrg_saved_rows', JSON.stringify(savedRows)); } catch(e) {}
 }
 
-function updateScanBtn(){ scanBtn.disabled=!scanImageB64||!getKey(); }
-
-async function testKey(){
-  const key=getKey();
-  const resultEl=document.getElementById('keyTestResult');
-  const btn=document.getElementById('testKeyBtn');
-  if(!key){
-    resultEl.style.display='block';
-    resultEl.style.background='rgba(248,113,113,0.1)';
-    resultEl.style.color='var(--error)';
-    resultEl.textContent='✗ No API key entered';
-    return;
-  }
-  btn.textContent='Testing…';
-  resultEl.style.display='none';
-  try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,messages:[{role:'user',content:'hi'}]})
-    });
-    const data=await resp.json();
-    resultEl.style.display='block';
-    if(resp.ok){
-      resultEl.style.background='rgba(74,222,128,0.1)';
-      resultEl.style.color='var(--success)';
-      resultEl.textContent='✓ API key is valid and working';
-    } else {
-      resultEl.style.background='rgba(248,113,113,0.1)';
-      resultEl.style.color='var(--error)';
-      resultEl.textContent=`✗ ${resp.status}: ${data.error?.message||'Invalid key'}`;
-    }
-  }catch(err){
-    resultEl.style.display='block';
-    resultEl.style.background='rgba(248,113,113,0.1)';
-    resultEl.style.color='var(--error)';
-    resultEl.textContent=`✗ Network error: ${err.message}`;
-  } finally { btn.textContent='Test Key'; }
+function updateScanBtn() {
+  const btn = document.getElementById('scanBtn');
+  if (btn) btn.disabled = !imageQueue.length || !getKey();
 }
 
-function slog(msg,type='ll'){
-  const d=document.createElement('div'); d.className=`ll ${type}`; d.textContent=msg;
-  scanLog.appendChild(d); scanLog.scrollTop=scanLog.scrollHeight;
-}
-
-function clearScan(){
-  scanImageB64=null; scanImageType=null;
-  previewWrap.classList.remove('visible');
-  scanInner.style.display='block';
-  fieldsCard.classList.remove('visible');
-  saveRowBtn.style.display='none';
-  scanLog.innerHTML=''; scanLog.classList.remove('visible');
-  updateScanBtn();
-}
-
-scanInput.addEventListener('change',e=>{
-  const f=e.target.files[0]; if(!f)return;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    const dataUrl=ev.target.result;
-    imgPreview.src=dataUrl;
-    previewWrap.classList.add('visible');
-    scanInner.style.display='none';
-    // extract base64
-    const parts=dataUrl.split(',');
-    scanImageType=f.type||'image/jpeg';
-    scanImageB64=parts[1];
-    updateScanBtn();
-  };
-  reader.readAsDataURL(f);
-});
-
-// Drag-drop image onto scan zone
-scanZone.addEventListener('dragover',e=>{e.preventDefault();scanZone.style.borderColor='var(--accent2)';});
-scanZone.addEventListener('dragleave',()=>scanZone.style.borderColor='');
-scanZone.addEventListener('drop',e=>{
-  e.preventDefault(); scanZone.style.borderColor='';
-  const f=e.dataTransfer.files[0];
-  if(f&&f.type.startsWith('image/')){
-    const dt=new DataTransfer(); dt.items.add(f);
-    scanInput.files=dt.files;
-    scanInput.dispatchEvent(new Event('change'));
-  }
-});
-
-scanBtn.addEventListener('click', async ()=>{
-  const key=getKey();
-  if(!key||!scanImageB64){return;}
-  scanLog.innerHTML=''; scanLog.classList.add('visible');
-  fieldsCard.classList.remove('visible');
-  saveRowBtn.style.display='none';
-  scanBtn.disabled=true;
-  scanBtn.innerHTML='<span class="spinner"></span> Reading tag…';
-  slog('→ Sending image to Claude Vision…','head');
-
-  const prompt=`You are reading a physical color sample plate tag or label. Extract the following fields and return ONLY a JSON object with these keys (use empty string if not found):
-- plate_id: The plate/sample ID code (e.g. JK-3037, DR-08-2, E-02)
-- plate_name: Short color description or name (e.g. Gold, Skin Pink, Mud Base)
-- series: Project or series name (e.g. Nanotint, EROS, Dogs with Rabbit)
-- date: Any date or batch number visible
-- notes: Any other relevant text on the label
-
-Return ONLY the JSON object, no explanation, no markdown.`;
-
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:400,
-        messages:[{role:'user',content:[
-          {type:'image',source:{type:'base64',media_type:scanImageType,data:scanImageB64}},
-          {type:'text',text:prompt}
-        ]}]
-      })
-    });
-    const data=await resp.json();
-    if(!resp.ok){
-      const errMsg = data.error?.message || JSON.stringify(data.error) || `HTTP ${resp.status}`;
-      const errType = data.error?.type || '';
-      slog(`✗ API error (${resp.status}): ${errMsg}`,'err');
-      if(resp.status===401) slog('→ Check your API key — it may be incorrect or expired','warn');
-      if(resp.status===400) slog('→ Bad request — image may be too large, try a smaller photo','warn');
-      if(resp.status===529||resp.status===529) slog('→ API overloaded — wait a moment and try again','warn');
-      slog(`Full error: ${JSON.stringify(data)}`,'warn');
-      return;
-    }
-    const raw=data.content.find(b=>b.type==='text')?.text||'';
-    slog('✓ Response received','ok');
-    const clean=raw.replace(/```json|```/g,'').trim();
-    const parsed=JSON.parse(clean);
-    document.getElementById('f_plate_id').value=parsed.plate_id||'';
-    document.getElementById('f_plate_name').value=parsed.plate_name||'';
-    document.getElementById('f_series').value=parsed.series||'';
-    document.getElementById('f_plate_type').value='';
-    document.getElementById('f_date').value=parsed.date||'';
-    document.getElementById('f_notes').value=parsed.notes||'';
-    fieldsCard.classList.add('visible');
-    saveRowBtn.style.display='flex';
-    slog('✓ Fields extracted — review and save below','ok');
-  } catch(err){
-    slog(`✗ ${err.message}`,'err');
-  } finally {
-    scanBtn.disabled=false;
-    scanBtn.innerHTML='<svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13 3L6 10.5 3 7.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> Read Tag with AI';
-    updateScanBtn();
-  }
-});
-
-// Save row
-function saveRow(){
-  const row={
-    'Plate ID':document.getElementById('f_plate_id').value,
-    'Plate Name':document.getElementById('f_plate_name').value,
-    'Series / Project':document.getElementById('f_series').value,
-    'Plate Type':document.getElementById('f_plate_type').value,
-    'Date / Batch':document.getElementById('f_date').value,
-    'Substrate / Base':'',
-    'Total Sections':11,
-    'Status':'Active',
-    'Notes':document.getElementById('f_notes').value,
-  };
-  savedRows.push(row);
-  persistRows();
-  renderSaved();
-  clearScan();
-  slog(`✓ Saved: ${row['Plate ID']} – ${row['Plate Name']}`,'ok');
-  scanLog.classList.add('visible');
-}
-
-function renderSaved(){
-  const list=document.getElementById('savedList');
-  const sec=document.getElementById('savedSection');
-  const countEl=document.getElementById('savedCount');
-  const dlBtn=document.getElementById('scanDl');
-  if(!savedRows.length){sec.classList.remove('visible');return;}
+function renderSaved() {
+  const list    = document.getElementById('savedList');
+  const sec     = document.getElementById('savedSection');
+  const countEl = document.getElementById('savedCount');
+  const dlBtn   = document.getElementById('scanDl');
+  if (!savedRows.length) { sec.classList.remove('visible'); return; }
   sec.classList.add('visible');
-  countEl.textContent=savedRows.length;
-  list.innerHTML=savedRows.map((r,i)=>`
+  countEl.textContent = savedRows.length;
+  list.innerHTML = savedRows.map((r, i) => `
     <div class="saved-row">
-      <div>
+      <div style="flex:1;min-width:0;">
         <div class="title">${r['Plate ID']} – ${r['Plate Name']}</div>
         <div class="meta">${r['Series / Project']||'—'} · ${r['Plate Type']||'—'} · ${r['Date / Batch']||'—'}</div>
+        ${r['Drive Link'] ? `<div style="margin-top:3px;"><a href="${r['Drive Link']}" target="_blank" style="font-family:'DM Mono',monospace;font-size:9px;color:var(--success);text-decoration:none;">↗ View in Drive</a></div>` : ''}
+        ${r['Image File'] && !r['Drive Link'] ? `<div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-top:2px;">${r['Image File']}</div>` : ''}
       </div>
       <button class="del" onclick="deleteRow(${i})">✕</button>
     </div>`).join('');
-  const SCAN_FIELDS=['Plate ID','Plate Name','Series / Project','Plate Type','Date / Batch','Substrate / Base','Total Sections','Status','Notes'];
-  const csv=toCSV(savedRows,SCAN_FIELDS);
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  dlBtn.href=URL.createObjectURL(blob);
-  dlBtn.style.display='flex';
-  // show clear all if not already there
-  if(!document.getElementById('clearAllBtn')){
-    const clr=document.createElement('button');
-    clr.id='clearAllBtn';
-    clr.textContent='Clear All';
-    clr.style.cssText='width:100%;margin-top:8px;padding:10px;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:var(--radius);font-family:"DM Sans",sans-serif;font-size:13px;cursor:pointer;transition:all .15s;';
-    clr.onmouseenter=()=>clr.style.color='var(--error)';
-    clr.onmouseleave=()=>clr.style.color='var(--muted)';
-    clr.onclick=clearAllRows;
-    document.getElementById('savedSection').appendChild(clr);
-  }
+  const SCAN_FIELDS = ['Plate ID','Plate Name','Series / Project','Plate Type','Date / Batch',
+    'Substrate / Base','Total Sections','Status','Notes','Image File','Drive Link'];
+  const csv = toCSV(savedRows, SCAN_FIELDS);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  dlBtn.href = URL.createObjectURL(blob);
+  dlBtn.style.display = 'flex';
 }
 
-function deleteRow(i){savedRows.splice(i,1);persistRows();renderSaved();}
-function clearAllRows(){if(confirm(`Delete all ${savedRows.length} saved rows?`)){savedRows=[];persistRows();renderSaved();}}
+function deleteRow(i) { savedRows.splice(i, 1); persistRows(); renderSaved(); }
+function clearAllRows() {
+  if (confirm(`Delete all ${savedRows.length} saved rows?`)) { savedRows = []; persistRows(); renderSaved(); }
+}
+
+function slog(msg, type='ll') {
+  const scanLog = document.getElementById('scanLog');
+  const d = document.createElement('div'); d.className = `ll ${type}`; d.textContent = msg;
+  scanLog.appendChild(d); scanLog.scrollTop = scanLog.scrollHeight;
+}
+
 </script>
 </body>
 </html>
