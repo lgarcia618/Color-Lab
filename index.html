@@ -586,7 +586,10 @@ function updateDriveUI(connected) {
       linkBar = document.createElement('div');
       linkBar.id = 'sheetLinkBar';
       linkBar.style.cssText = 'display:flex;gap:12px;flex-wrap:wrap;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;font-family:"DM Mono",monospace;font-size:10px;';
-      document.getElementById('driveBar').parentNode.insertBefore(linkBar, document.getElementById('scanZone'));
+      const scanZoneEl = document.getElementById('scanZone');
+      if (scanZoneEl && scanZoneEl.parentNode) {
+        scanZoneEl.parentNode.insertBefore(linkBar, scanZoneEl);
+      }
     }
     const regId  = localStorage.getItem('lrg_sheet_registry');
     const libId  = localStorage.getItem('lrg_sheet_library');
