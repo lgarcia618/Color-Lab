@@ -250,12 +250,15 @@ input[type=file]{display:none;}
 <div class="tab-panel" id="panel-scan">
 
   <!-- Google Drive bar -->
-  <div class="api-bar" id="driveBar">
+  <div class="api-bar" id="driveBar" style="flex-wrap:wrap;gap:8px;">
     <label>Google Drive</label>
-    <span class="api-status" id="driveStatus" style="color:var(--muted);">not connected</span>
+    <input type="text" id="gclientIdInput" placeholder="paste Client ID here (ends in .apps.googleusercontent.com)"
+      style="flex:1;min-width:0;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;outline:none;transition:border-color .15s;">
+    <span class="api-status" id="driveStatus" style="color:var(--muted);white-space:nowrap;">not connected</span>
     <button id="driveConnectBtn" onclick="connectDrive()" style="background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap;transition:all .15s;">Connect Drive</button>
     <button id="driveDisconnectBtn" onclick="disconnectDrive()" style="display:none;background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap;">Disconnect</button>
   </div>
+  <div id="clientIdError" style="display:none;font-family:'DM Mono',monospace;font-size:11px;padding:8px 12px;border-radius:8px;margin-bottom:8px;background:rgba(248,113,113,0.1);color:var(--error);border-left:3px solid var(--error);"></div>
   <div id="driveFolderBar" style="display:none;" class="api-bar">
     <label>Drive Folder</label>
     <input type="text" id="driveFolderName" placeholder="Color Lab Tag Photos" value="Color Lab Tag Photos"
@@ -357,6 +360,9 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   updateScanBtn();
   renderSaved();
+  const savedCid = localStorage.getItem('lrg_gclient_id');
+  const cidInput = document.getElementById('gclientIdInput');
+  if (savedCid && cidInput) cidInput.value = savedCid;
 });
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -495,28 +501,44 @@ function loadGoogleSDK(cb) {
 }
 
 function connectDrive() {
-  const clientId = localStorage.getItem('lrg_gclient_id');
+  const inputEl  = document.getElementById('gclientIdInput');
+  const errorEl  = document.getElementById('clientIdError');
+  const savedId  = localStorage.getItem('lrg_gclient_id');
+  const clientId = inputEl.value.trim() || savedId;
+
+  errorEl.style.display = 'none';
+
   if (!clientId) {
-    const id = prompt(
-      'Enter your Google OAuth Client ID.\n\n' +
-      'Get one free at: console.cloud.google.com\n' +
-      'Create project → Enable Drive API → Credentials → OAuth 2.0 Client ID (Web)\n' +
-      'Add your GitHub Pages URL as an Authorized JavaScript origin.'
-    );
-    if (!id) return;
-    localStorage.setItem('lrg_gclient_id', id.trim());
+    errorEl.textContent = '✗ Paste your Client ID above first — it ends in .apps.googleusercontent.com';
+    errorEl.style.display = 'block';
+    return;
   }
+  if (!clientId.includes('.apps.googleusercontent.com')) {
+    errorEl.textContent = '✗ That doesn\'t look like a valid Client ID — it should end in .apps.googleusercontent.com';
+    errorEl.style.display = 'block';
+    return;
+  }
+
+  localStorage.setItem('lrg_gclient_id', clientId);
+  inputEl.value = clientId;
+
   loadGoogleSDK(() => {
     const client = google.accounts.oauth2.initTokenClient({
-      client_id: localStorage.getItem('lrg_gclient_id'),
+      client_id: clientId,
       scope: GDRIVE_SCOPE,
       callback: (resp) => {
-        if (resp.error) { slog('✗ Drive auth failed: ' + resp.error, 'err'); return; }
+        if (resp.error) {
+          errorEl.textContent = `✗ Google auth error: ${resp.error} — double-check your Client ID and that https://lgarcia618.github.io is in Authorized JavaScript origins`;
+          errorEl.style.display = 'block';
+          return;
+        }
         driveToken = resp.access_token;
         localStorage.setItem('lrg_drive_token', driveToken);
         updateDriveUI(true);
-        slog('✓ Google Drive connected', 'ok');
+        const scanLog = document.getElementById('scanLog');
         scanLog.classList.add('visible');
+        const d = document.createElement('div'); d.className='ll ok'; d.textContent='✓ Google Drive connected';
+        scanLog.appendChild(d);
       }
     });
     client.requestAccessToken();
