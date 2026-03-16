@@ -695,7 +695,7 @@ function renderSaved(){
 function deleteRow(i){savedRows.splice(i,1);try{localStorage.setItem('lrg_rows',JSON.stringify(savedRows));}catch(e){}renderSaved();}
 function clearAll(){if(confirm('Delete all '+savedRows.length+' saved rows?')){savedRows=[];try{localStorage.setItem('lrg_rows','[]');}catch(e){}renderSaved();}}
 
-// ─── AIRTABLE ──────────────────────────────────────────────────────────────
+// ─── AIRTABLE (via Apps Script proxy) ─────────────────────────────────────
 var atTokenEl = document.getElementById('atToken');
 var atStatusEl = document.getElementById('atStatus');
 var atBaseId = null;
@@ -708,41 +708,35 @@ atTokenEl.addEventListener('input', function() {
   if (t) localStorage.setItem('lrg_at_token', t);
 });
 
-function atReq(method, path, body, cb) {
+// All Airtable requests go through Apps Script to avoid CORS
+function atReq(method, url, body, cb) {
   var token = getAtToken();
   if (!token) { cb('no token'); return; }
-  // Meta endpoints use /meta, record endpoints use /v0
-  var base = path.indexOf('/meta') === 0
-    ? 'https://api.airtable.com'
-    : 'https://api.airtable.com/v0';
-  var xhr = new XMLHttpRequest();
-  xhr.open(method, base + path);
-  xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.onload = function() {
-    try { var d = JSON.parse(xhr.responseText); cb(null, d); }
-    catch(e) { cb('parse error'); }
-  };
-  xhr.onerror = function() { cb('network error'); };
-  xhr.send(body ? JSON.stringify(body) : null);
+  scriptPost({ action: 'airtableReq', method: method, url: url, token: token, body: body || null },
+    function(err, d) {
+      if (err) { cb(err); return; }
+      if (!d.ok) { cb(d.error || ('HTTP ' + d.status)); return; }
+      cb(null, d.data);
+    });
 }
 
 function testAirtable() {
   var token = getAtToken();
   if (!token) { alert('Paste your Airtable Personal Access Token first'); return; }
+  if (!getScriptUrl()) { alert('Connect your Apps Script first — Airtable routes through it'); return; }
   atStatusEl.textContent = 'connecting\u2026';
   atStatusEl.className = 'status';
-  // Check if base already exists
-  atReq('GET', '/meta/bases', null, function(err, d) {
-    if (err || !d || !d.bases) {
-      atStatusEl.textContent = '\u2717 invalid token';
+  atReq('GET', 'https://api.airtable.com/v0/meta/bases', null, function(err, d) {
+    if (err) {
+      atStatusEl.textContent = '\u2717 ' + err;
       atStatusEl.className = 'status err';
       return;
     }
     // Look for existing Color Lab base
     var existing = null;
-    for (var i = 0; i < d.bases.length; i++) {
-      if (d.bases[i].name === 'Color Lab') { existing = d.bases[i]; break; }
+    var bases = d.bases || [];
+    for (var i = 0; i < bases.length; i++) {
+      if (bases[i].name === 'Color Lab') { existing = bases[i]; break; }
     }
     if (existing) {
       atBaseId = existing.id;
@@ -759,99 +753,57 @@ function testAirtable() {
 
 function createAtBase() {
   atStatusEl.textContent = 'creating base\u2026';
-  // Airtable requires at least one table on creation
-  atReq('POST', '/meta/bases', {
-    name: 'Color Lab',
-    workspaceId: null, // uses default workspace
-    tables: [{
-      name: 'Plate Registry',
-      fields: [
-        { name: 'Plate ID',          type: 'singleLineText' },
-        { name: 'Plate Name',        type: 'singleLineText' },
-        { name: 'Series / Project',  type: 'singleLineText' },
-        { name: 'Plate Type',        type: 'singleLineText' },
-        { name: 'Date / Batch',      type: 'singleLineText' },
-        { name: 'Substrate / Base',  type: 'singleLineText' },
-        { name: 'Total Sections',    type: 'number', options: { precision: 0 } },
-        { name: 'Status',            type: 'singleLineText' },
-        { name: 'Notes',             type: 'multilineText' },
-        { name: 'Image File',        type: 'singleLineText' },
-        { name: 'Drive Link',        type: 'url' }
-      ]
-    }]
-  }, function(err, d) {
-    if (err || !d || !d.id) {
-      // workspaceId null may fail — try fetching workspace first
-      atReq('GET', '/meta/workspaces', null, function(err2, wd) {
-        if (err2 || !wd || !wd.workspaces || !wd.workspaces.length) {
-          atStatusEl.textContent = '\u2717 need schema.bases:write scope';
-          atStatusEl.className = 'status err';
-          return;
-        }
-        var wsId = wd.workspaces[0].id;
-        createAtBaseWithWorkspace(wsId);
-      });
-      return;
-    }
-    atBaseId = d.id;
-    localStorage.setItem('lrg_at_base', atBaseId);
-    atStatusEl.textContent = '\u2713 base created';
-    atStatusEl.className = 'status ok';
-    showAtLink(atBaseId);
-    ensureAtTables(atBaseId);
-  });
-}
-
-function createAtBaseWithWorkspace(wsId) {
-  var body = {
-    name: 'Color Lab',
-    tables: [{
-      name: 'Plate Registry',
-      fields: [
-        { name: 'Plate ID',         type: 'singleLineText' },
-        { name: 'Plate Name',       type: 'singleLineText' },
-        { name: 'Series / Project', type: 'singleLineText' },
-        { name: 'Plate Type',       type: 'singleLineText' },
-        { name: 'Date / Batch',     type: 'singleLineText' },
-        { name: 'Substrate / Base', type: 'singleLineText' },
-        { name: 'Total Sections',   type: 'number', options: { precision: 0 } },
-        { name: 'Status',           type: 'singleLineText' },
-        { name: 'Notes',            type: 'multilineText' },
-        { name: 'Image File',       type: 'singleLineText' },
-        { name: 'Drive Link',       type: 'url' }
-      ]
-    }]
-  };
-  if (wsId) body.workspaceId = wsId;
-  atReq('POST', '/meta/bases', body, function(err, d) {
-    if (err || !d || !d.id) {
-      atStatusEl.textContent = '\u2717 base creation failed';
-      atStatusEl.className = 'status err';
-      return;
-    }
-    atBaseId = d.id;
-    localStorage.setItem('lrg_at_base', atBaseId);
-    atStatusEl.textContent = '\u2713 base created';
-    atStatusEl.className = 'status ok';
-    showAtLink(atBaseId);
-    ensureAtTables(atBaseId);
+  // Get workspace ID first
+  atReq('GET', 'https://api.airtable.com/v0/meta/workspaces', null, function(err, wd) {
+    var wsId = (!err && wd && wd.workspaces && wd.workspaces[0]) ? wd.workspaces[0].id : null;
+    var body = {
+      name: 'Color Lab',
+      tables: [{
+        name: 'Plate Registry',
+        fields: [
+          { name: 'Plate ID',         type: 'singleLineText' },
+          { name: 'Plate Name',       type: 'singleLineText' },
+          { name: 'Series / Project', type: 'singleLineText' },
+          { name: 'Plate Type',       type: 'singleLineText' },
+          { name: 'Date / Batch',     type: 'singleLineText' },
+          { name: 'Substrate / Base', type: 'singleLineText' },
+          { name: 'Total Sections',   type: 'number', options: { precision: 0 } },
+          { name: 'Status',           type: 'singleLineText' },
+          { name: 'Notes',            type: 'multilineText' },
+          { name: 'Image File',       type: 'singleLineText' },
+          { name: 'Drive Link',       type: 'url' }
+        ]
+      }]
+    };
+    if (wsId) body.workspaceId = wsId;
+    atReq('POST', 'https://api.airtable.com/v0/meta/bases', body, function(err2, d) {
+      if (err2 || !d || !d.id) {
+        atStatusEl.textContent = '\u2717 base creation failed';
+        atStatusEl.className = 'status err';
+        return;
+      }
+      atBaseId = d.id;
+      localStorage.setItem('lrg_at_base', atBaseId);
+      atStatusEl.textContent = '\u2713 base created';
+      atStatusEl.className = 'status ok';
+      showAtLink(atBaseId);
+      ensureAtTables(atBaseId);
+    });
   });
 }
 
 function ensureAtTables(baseId) {
-  // Get existing tables
-  atReq('GET', '/meta/bases/' + baseId + '/tables', null, function(err, d) {
+  atReq('GET', 'https://api.airtable.com/v0/meta/bases/' + baseId + '/tables', null, function(err, d) {
     if (err || !d || !d.tables) return;
     var tables = d.tables;
-    var hasRegistry = false, hasLibrary = false;
+    var hasLibrary = false;
     for (var i = 0; i < tables.length; i++) {
-      if (tables[i].name === 'Plate Registry') { hasRegistry = true; atTableIds['registry'] = tables[i].id; }
-      if (tables[i].name === 'Color Library')  { hasLibrary  = true; atTableIds['library']  = tables[i].id; }
+      if (tables[i].name === 'Plate Registry') atTableIds['registry'] = tables[i].id;
+      if (tables[i].name === 'Color Library')  { hasLibrary = true; atTableIds['library'] = tables[i].id; }
     }
     localStorage.setItem('lrg_at_tables', JSON.stringify(atTableIds));
     if (!hasLibrary) {
-      // Create Color Library table
-      atReq('POST', '/meta/bases/' + baseId + '/tables', {
+      atReq('POST', 'https://api.airtable.com/v0/meta/bases/' + baseId + '/tables', {
         name: 'Color Library',
         fields: [
           { name: 'Sample Title',     type: 'singleLineText' },
@@ -892,25 +844,21 @@ function showAtLink(baseId) {
 }
 
 function atAppendRegistry(row, cb) {
-  var token = getAtToken();
   var baseId = atBaseId || localStorage.getItem('lrg_at_base');
-  if (!token || !baseId) { if (cb) cb('not configured'); return; }
+  if (!getAtToken() || !baseId) { if (cb) cb(null); return; }
   var fields = {};
   var keys = ['Plate ID','Plate Name','Series / Project','Plate Type','Date / Batch',
     'Substrate / Base','Status','Notes','Image File','Drive Link'];
   for (var i = 0; i < keys.length; i++) fields[keys[i]] = row[keys[i]] || '';
-  if (row['Total Sections']) fields['Total Sections'] = Number(row['Total Sections']) || 0;
-  atReq('POST', '/v0/' + baseId + '/Plate%20Registry', { records: [{ fields: fields }] }, function(err, d) {
-    if (cb) cb(err || (d && d.error ? d.error.message : null));
-  });
+  fields['Total Sections'] = Number(row['Total Sections']) || 11;
+  atReq('POST', 'https://api.airtable.com/v0/' + baseId + '/Plate%20Registry',
+    { records: [{ fields: fields }] }, function(err) { if (cb) cb(err); });
 }
 
 function atAppendLibraryBatch(records, cb) {
-  var token = getAtToken();
   var baseId = atBaseId || localStorage.getItem('lrg_at_base');
-  if (!token || !baseId) { if (cb) cb('not configured'); return; }
+  if (!getAtToken() || !baseId) { if (cb) cb(null); return; }
   var numFields = ['Section #','L*','a*','b*','\u0394E00','\u0394L*','\u0394a*','\u0394b*'];
-  // Airtable max 10 records per request
   var chunks = [];
   for (var i = 0; i < records.length; i += 10) chunks.push(records.slice(i, i + 10));
   var ci = 0;
@@ -922,21 +870,22 @@ function atAppendLibraryBatch(records, cb) {
       var libKeys = ['Sample Title','Series / Project','Plate ID','Plate Name','Plate Type',
         'Section','Section #','Position','L*','a*','b*','\u0394E00','\u0394L*','\u0394a*','\u0394b*','Judgement','Group Traits','Notes'];
       for (var k = 0; k < libKeys.length; k++) {
-        var key = libKeys[k];
-        var val = rec[key];
+        var key = libKeys[k], val = rec[key];
         if (val === '' || val == null) continue;
         if (numFields.indexOf(key) > -1) { var n = parseFloat(val); if (!isNaN(n)) fields[key] = n; }
         else fields[key] = String(val);
       }
       return { fields: fields };
     });
-    atReq('POST', '/v0/' + baseId + '/Color%20Library', { records: atRecs }, function(err) {
-      if (err) { if (cb) cb(err); return; }
-      setTimeout(nextChunk, 250);
-    });
+    atReq('POST', 'https://api.airtable.com/v0/' + baseId + '/Color%20Library',
+      { records: atRecs }, function(err) {
+        if (err) { if (cb) cb(err); return; }
+        setTimeout(nextChunk, 300);
+      });
   }
   nextChunk();
 }
+
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
 (function init(){
