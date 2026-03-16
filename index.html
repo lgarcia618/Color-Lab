@@ -711,8 +711,12 @@ atTokenEl.addEventListener('input', function() {
 function atReq(method, path, body, cb) {
   var token = getAtToken();
   if (!token) { cb('no token'); return; }
+  // Meta endpoints use /meta, record endpoints use /v0
+  var base = path.indexOf('/meta') === 0
+    ? 'https://api.airtable.com'
+    : 'https://api.airtable.com/v0';
   var xhr = new XMLHttpRequest();
-  xhr.open(method, 'https://api.airtable.com/v0' + path);
+  xhr.open(method, base + path);
   xhr.setRequestHeader('Authorization', 'Bearer ' + token);
   xhr.setRequestHeader('Content-Type', 'application/json');
   xhr.onload = function() {
@@ -779,7 +783,12 @@ function createAtBase() {
     if (err || !d || !d.id) {
       // workspaceId null may fail — try fetching workspace first
       atReq('GET', '/meta/workspaces', null, function(err2, wd) {
-        var wsId = (!err2 && wd && wd.workspaces && wd.workspaces[0]) ? wd.workspaces[0].id : null;
+        if (err2 || !wd || !wd.workspaces || !wd.workspaces.length) {
+          atStatusEl.textContent = '\u2717 need schema.bases:write scope';
+          atStatusEl.className = 'status err';
+          return;
+        }
+        var wsId = wd.workspaces[0].id;
         createAtBaseWithWorkspace(wsId);
       });
       return;
