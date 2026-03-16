@@ -160,15 +160,27 @@ input[type=file]{display:none;}
     <button class="sbtn" onclick="testScript()">Test</button>
   </div>
 
+  <!-- Airtable token -->
+  <div class="bar">
+    <label>Airtable</label>
+    <input type="password" id="atToken" placeholder="pat… (Personal Access Token)">
+    <span class="status" id="atStatus">not connected</span>
+    <button class="sbtn" onclick="testAirtable()">Connect</button>
+  </div>
+
   <div class="info-box" id="scriptInfo">
     No script connected — Drive upload and Sheet sync disabled. Scan still works, CSV export available.
   </div>
 
-  <!-- Sheet links -->
+  <!-- Sheet + Airtable links -->
   <div class="sheet-links" id="sheetLinks">
     <span style="color:var(--muted)">Sheets:</span>
     <a id="regLink" href="#" target="_blank">↗ Plate Registry</a>
     <a id="libLink" href="#" target="_blank">↗ Color Library</a>
+  </div>
+  <div class="sheet-links" id="atLinks">
+    <span style="color:var(--muted)">Airtable:</span>
+    <a id="atBaseLink" href="#" target="_blank">↗ Color Lab Base</a>
   </div>
 
   <!-- Image zone -->
@@ -290,10 +302,9 @@ function scriptPost(data, cb) {
   if (!url) { if (cb) cb('no script url'); return; }
   var xhr = new XMLHttpRequest();
   xhr.open('POST', url);
-  xhr.setRequestHeader('Content-Type', 'text/plain'); // Apps Script requires text/plain for CORS
   xhr.onload = function() {
     try { var d = JSON.parse(xhr.responseText); if (cb) cb(null, d); }
-    catch(e) { if (cb) cb('parse error'); }
+    catch(e) { if (cb) cb('parse error: ' + xhr.responseText.substring(0,100)); }
   };
   xhr.onerror = function() { if (cb) cb('network error'); };
   xhr.send(JSON.stringify(data));
@@ -302,34 +313,50 @@ function scriptPost(data, cb) {
 function testScript() {
   var url = getScriptUrl();
   if (!url) { alert('Paste your Apps Script URL first'); return; }
-  scriptStatusEl.textContent = 'testing…';
+  scriptStatusEl.textContent = 'testing\u2026';
   scriptStatusEl.className = 'status';
-  scriptPost({ action: 'ping' }, function(err, d) {
-    if (err || !d || !d.ok) {
-      scriptStatusEl.textContent = '✗ failed';
+  // Use GET for ping — simpler CORS
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', url + '?action=ping');
+  xhr.onload = function() {
+    try {
+      var d = JSON.parse(xhr.responseText);
+      if (d && d.ok) {
+        scriptStatusEl.textContent = '\u2713 connected';
+        scriptStatusEl.className = 'status ok';
+        document.getElementById('scriptInfo').style.display = 'none';
+        loadSheetUrls();
+      } else {
+        scriptStatusEl.textContent = '\u2717 failed';
+        scriptStatusEl.className = 'status err';
+      }
+    } catch(e) {
+      scriptStatusEl.textContent = '\u2717 failed';
       scriptStatusEl.className = 'status err';
-      return;
     }
-    scriptStatusEl.textContent = '✓ connected';
-    scriptStatusEl.className = 'status ok';
-    document.getElementById('scriptInfo').style.display = 'none';
-    loadSheetUrls();
-  });
+  };
+  xhr.onerror = function() {
+    scriptStatusEl.textContent = '\u2717 network error';
+    scriptStatusEl.className = 'status err';
+  };
+  xhr.send();
 }
 
 function loadSheetUrls() {
-  scriptPost({ action: 'getSheetUrls' }, function(err, d) {
-    if (err || !d || !d.ok) return;
-    var linksEl = document.getElementById('sheetLinks');
-    if (d.registryUrl) {
-      document.getElementById('regLink').href = d.registryUrl;
-      linksEl.classList.add('on');
-    }
-    if (d.libraryUrl) {
-      document.getElementById('libLink').href = d.libraryUrl;
-      linksEl.classList.add('on');
-    }
-  });
+  var url = getScriptUrl();
+  if (!url) return;
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', url + '?action=getSheetUrls');
+  xhr.onload = function() {
+    try {
+      var d = JSON.parse(xhr.responseText);
+      if (!d || !d.ok) return;
+      var linksEl = document.getElementById('sheetLinks');
+      if (d.registryUrl) { document.getElementById('regLink').href = d.registryUrl; linksEl.classList.add('on'); }
+      if (d.libraryUrl)  { document.getElementById('libLink').href = d.libraryUrl;  linksEl.classList.add('on'); }
+    } catch(e) {}
+  };
+  xhr.send();
 }
 
 // ─── NX2 CONVERT ──────────────────────────────────────────────────────────
@@ -468,6 +495,15 @@ function doConvert() {
           else clog('\u2713 '+recs.length+' rows added to Color Library','l-ok');
         });
       }
+      // Push to Airtable
+      var atTok=getAtToken();
+      if(atTok){
+        clog('Sending to Airtable Color Library\u2026','');
+        atAppendLibraryBatch(recs,function(err){
+          if(err) clog('\u26a0 Airtable sync failed: '+err,'l-warn');
+          else clog('\u2713 '+recs.length+' rows added to Airtable','l-ok');
+        });
+      }
     }catch(err){clog('\u2717 '+err.message,'l-err');}
   };
   reader.readAsArrayBuffer(nx2Data);
@@ -591,6 +627,11 @@ function doScan(){
           if(surl){
             scriptPost({action:'appendRegistry',row:row},function(){});
           }
+          // Push to Airtable
+          var atTok=getAtToken();
+          if(atTok){
+            atAppendRegistry(row,function(){});
+          }
           setTimeout(function(){processNext(idx+1);},400);
         }
 
@@ -654,16 +695,260 @@ function renderSaved(){
 function deleteRow(i){savedRows.splice(i,1);try{localStorage.setItem('lrg_rows',JSON.stringify(savedRows));}catch(e){}renderSaved();}
 function clearAll(){if(confirm('Delete all '+savedRows.length+' saved rows?')){savedRows=[];try{localStorage.setItem('lrg_rows','[]');}catch(e){}renderSaved();}}
 
+// ─── AIRTABLE ──────────────────────────────────────────────────────────────
+var atTokenEl = document.getElementById('atToken');
+var atStatusEl = document.getElementById('atStatus');
+var atBaseId = null;
+var atTableIds = {};
+
+function getAtToken() { return atTokenEl.value.trim() || localStorage.getItem('lrg_at_token') || ''; }
+
+atTokenEl.addEventListener('input', function() {
+  var t = atTokenEl.value.trim();
+  if (t) localStorage.setItem('lrg_at_token', t);
+});
+
+function atReq(method, path, body, cb) {
+  var token = getAtToken();
+  if (!token) { cb('no token'); return; }
+  var xhr = new XMLHttpRequest();
+  xhr.open(method, 'https://api.airtable.com/v0' + path);
+  xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onload = function() {
+    try { var d = JSON.parse(xhr.responseText); cb(null, d); }
+    catch(e) { cb('parse error'); }
+  };
+  xhr.onerror = function() { cb('network error'); };
+  xhr.send(body ? JSON.stringify(body) : null);
+}
+
+function testAirtable() {
+  var token = getAtToken();
+  if (!token) { alert('Paste your Airtable Personal Access Token first'); return; }
+  atStatusEl.textContent = 'connecting\u2026';
+  atStatusEl.className = 'status';
+  // Check if base already exists
+  atReq('GET', '/meta/bases', null, function(err, d) {
+    if (err || !d || !d.bases) {
+      atStatusEl.textContent = '\u2717 invalid token';
+      atStatusEl.className = 'status err';
+      return;
+    }
+    // Look for existing Color Lab base
+    var existing = null;
+    for (var i = 0; i < d.bases.length; i++) {
+      if (d.bases[i].name === 'Color Lab') { existing = d.bases[i]; break; }
+    }
+    if (existing) {
+      atBaseId = existing.id;
+      localStorage.setItem('lrg_at_base', atBaseId);
+      atStatusEl.textContent = '\u2713 connected';
+      atStatusEl.className = 'status ok';
+      showAtLink(atBaseId);
+      ensureAtTables(atBaseId);
+    } else {
+      createAtBase();
+    }
+  });
+}
+
+function createAtBase() {
+  atStatusEl.textContent = 'creating base\u2026';
+  // Airtable requires at least one table on creation
+  atReq('POST', '/meta/bases', {
+    name: 'Color Lab',
+    workspaceId: null, // uses default workspace
+    tables: [{
+      name: 'Plate Registry',
+      fields: [
+        { name: 'Plate ID',          type: 'singleLineText' },
+        { name: 'Plate Name',        type: 'singleLineText' },
+        { name: 'Series / Project',  type: 'singleLineText' },
+        { name: 'Plate Type',        type: 'singleLineText' },
+        { name: 'Date / Batch',      type: 'singleLineText' },
+        { name: 'Substrate / Base',  type: 'singleLineText' },
+        { name: 'Total Sections',    type: 'number', options: { precision: 0 } },
+        { name: 'Status',            type: 'singleLineText' },
+        { name: 'Notes',             type: 'multilineText' },
+        { name: 'Image File',        type: 'singleLineText' },
+        { name: 'Drive Link',        type: 'url' }
+      ]
+    }]
+  }, function(err, d) {
+    if (err || !d || !d.id) {
+      // workspaceId null may fail — try fetching workspace first
+      atReq('GET', '/meta/workspaces', null, function(err2, wd) {
+        var wsId = (!err2 && wd && wd.workspaces && wd.workspaces[0]) ? wd.workspaces[0].id : null;
+        createAtBaseWithWorkspace(wsId);
+      });
+      return;
+    }
+    atBaseId = d.id;
+    localStorage.setItem('lrg_at_base', atBaseId);
+    atStatusEl.textContent = '\u2713 base created';
+    atStatusEl.className = 'status ok';
+    showAtLink(atBaseId);
+    ensureAtTables(atBaseId);
+  });
+}
+
+function createAtBaseWithWorkspace(wsId) {
+  var body = {
+    name: 'Color Lab',
+    tables: [{
+      name: 'Plate Registry',
+      fields: [
+        { name: 'Plate ID',         type: 'singleLineText' },
+        { name: 'Plate Name',       type: 'singleLineText' },
+        { name: 'Series / Project', type: 'singleLineText' },
+        { name: 'Plate Type',       type: 'singleLineText' },
+        { name: 'Date / Batch',     type: 'singleLineText' },
+        { name: 'Substrate / Base', type: 'singleLineText' },
+        { name: 'Total Sections',   type: 'number', options: { precision: 0 } },
+        { name: 'Status',           type: 'singleLineText' },
+        { name: 'Notes',            type: 'multilineText' },
+        { name: 'Image File',       type: 'singleLineText' },
+        { name: 'Drive Link',       type: 'url' }
+      ]
+    }]
+  };
+  if (wsId) body.workspaceId = wsId;
+  atReq('POST', '/meta/bases', body, function(err, d) {
+    if (err || !d || !d.id) {
+      atStatusEl.textContent = '\u2717 base creation failed';
+      atStatusEl.className = 'status err';
+      return;
+    }
+    atBaseId = d.id;
+    localStorage.setItem('lrg_at_base', atBaseId);
+    atStatusEl.textContent = '\u2713 base created';
+    atStatusEl.className = 'status ok';
+    showAtLink(atBaseId);
+    ensureAtTables(atBaseId);
+  });
+}
+
+function ensureAtTables(baseId) {
+  // Get existing tables
+  atReq('GET', '/meta/bases/' + baseId + '/tables', null, function(err, d) {
+    if (err || !d || !d.tables) return;
+    var tables = d.tables;
+    var hasRegistry = false, hasLibrary = false;
+    for (var i = 0; i < tables.length; i++) {
+      if (tables[i].name === 'Plate Registry') { hasRegistry = true; atTableIds['registry'] = tables[i].id; }
+      if (tables[i].name === 'Color Library')  { hasLibrary  = true; atTableIds['library']  = tables[i].id; }
+    }
+    localStorage.setItem('lrg_at_tables', JSON.stringify(atTableIds));
+    if (!hasLibrary) {
+      // Create Color Library table
+      atReq('POST', '/meta/bases/' + baseId + '/tables', {
+        name: 'Color Library',
+        fields: [
+          { name: 'Sample Title',     type: 'singleLineText' },
+          { name: 'Series / Project', type: 'singleLineText' },
+          { name: 'Plate ID',         type: 'singleLineText' },
+          { name: 'Plate Name',       type: 'singleLineText' },
+          { name: 'Plate Type',       type: 'singleLineText' },
+          { name: 'Section',          type: 'singleLineText' },
+          { name: 'Section #',        type: 'number', options: { precision: 0 } },
+          { name: 'Position',         type: 'singleLineText' },
+          { name: 'L*',               type: 'number', options: { precision: 4 } },
+          { name: 'a*',               type: 'number', options: { precision: 4 } },
+          { name: 'b*',               type: 'number', options: { precision: 4 } },
+          { name: '\u0394E00',        type: 'number', options: { precision: 4 } },
+          { name: '\u0394L*',         type: 'number', options: { precision: 4 } },
+          { name: '\u0394a*',         type: 'number', options: { precision: 4 } },
+          { name: '\u0394b*',         type: 'number', options: { precision: 4 } },
+          { name: 'Judgement',        type: 'singleLineText' },
+          { name: 'Group Traits',     type: 'singleLineText' },
+          { name: 'Notes',            type: 'multilineText' }
+        ]
+      }, function(err2, t) {
+        if (!err2 && t && t.id) {
+          atTableIds['library'] = t.id;
+          localStorage.setItem('lrg_at_tables', JSON.stringify(atTableIds));
+        }
+      });
+    }
+    atStatusEl.textContent = '\u2713 connected';
+    atStatusEl.className = 'status ok';
+  });
+}
+
+function showAtLink(baseId) {
+  var linksEl = document.getElementById('atLinks');
+  document.getElementById('atBaseLink').href = 'https://airtable.com/' + baseId;
+  linksEl.classList.add('on');
+}
+
+function atAppendRegistry(row, cb) {
+  var token = getAtToken();
+  var baseId = atBaseId || localStorage.getItem('lrg_at_base');
+  if (!token || !baseId) { if (cb) cb('not configured'); return; }
+  var fields = {};
+  var keys = ['Plate ID','Plate Name','Series / Project','Plate Type','Date / Batch',
+    'Substrate / Base','Status','Notes','Image File','Drive Link'];
+  for (var i = 0; i < keys.length; i++) fields[keys[i]] = row[keys[i]] || '';
+  if (row['Total Sections']) fields['Total Sections'] = Number(row['Total Sections']) || 0;
+  atReq('POST', '/v0/' + baseId + '/Plate%20Registry', { records: [{ fields: fields }] }, function(err, d) {
+    if (cb) cb(err || (d && d.error ? d.error.message : null));
+  });
+}
+
+function atAppendLibraryBatch(records, cb) {
+  var token = getAtToken();
+  var baseId = atBaseId || localStorage.getItem('lrg_at_base');
+  if (!token || !baseId) { if (cb) cb('not configured'); return; }
+  var numFields = ['Section #','L*','a*','b*','\u0394E00','\u0394L*','\u0394a*','\u0394b*'];
+  // Airtable max 10 records per request
+  var chunks = [];
+  for (var i = 0; i < records.length; i += 10) chunks.push(records.slice(i, i + 10));
+  var ci = 0;
+  function nextChunk() {
+    if (ci >= chunks.length) { if (cb) cb(null); return; }
+    var chunk = chunks[ci++];
+    var atRecs = chunk.map(function(rec) {
+      var fields = {};
+      var libKeys = ['Sample Title','Series / Project','Plate ID','Plate Name','Plate Type',
+        'Section','Section #','Position','L*','a*','b*','\u0394E00','\u0394L*','\u0394a*','\u0394b*','Judgement','Group Traits','Notes'];
+      for (var k = 0; k < libKeys.length; k++) {
+        var key = libKeys[k];
+        var val = rec[key];
+        if (val === '' || val == null) continue;
+        if (numFields.indexOf(key) > -1) { var n = parseFloat(val); if (!isNaN(n)) fields[key] = n; }
+        else fields[key] = String(val);
+      }
+      return { fields: fields };
+    });
+    atReq('POST', '/v0/' + baseId + '/Color%20Library', { records: atRecs }, function(err) {
+      if (err) { if (cb) cb(err); return; }
+      setTimeout(nextChunk, 250);
+    });
+  }
+  nextChunk();
+}
+
 // ─── INIT ──────────────────────────────────────────────────────────────────
 (function init(){
   var k=localStorage.getItem('lrg_api_key');
   if(k){apiKeyEl.value=k;apiStatusEl.textContent='\u2713 saved';apiStatusEl.className='status ok';}
   var u=localStorage.getItem('lrg_script_url');
   if(u){scriptUrlEl.value=u;}
+  var atTok=localStorage.getItem('lrg_at_token');
+  if(atTok){atTokenEl.value=atTok;}
+  var atBase=localStorage.getItem('lrg_at_base');
+  if(atBase){
+    atBaseId=atBase;
+    atStatusEl.textContent='\u2713 connected';
+    atStatusEl.className='status ok';
+    showAtLink(atBase);
+    var savedTables=localStorage.getItem('lrg_at_tables');
+    if(savedTables){try{atTableIds=JSON.parse(savedTables);}catch(e){}}
+  }
   updateScriptUI();
   renderSaved();
 })();
 </script>
 </body>
 </html>
-
