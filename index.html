@@ -22,38 +22,28 @@ header{margin-bottom:28px;}
   text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
 h1{font-size:clamp(22px,5vw,36px);font-weight:300;letter-spacing:-.02em;}
 h1 span{color:var(--accent);font-weight:600;}
-
-/* Bar */
 .bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
   padding:12px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
 .bar label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--muted);white-space:nowrap;}
-.bar input[type=text],.bar input[type=password]{flex:1;min-width:120px;background:var(--surface2);
-  border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);
-  font-family:'DM Mono',monospace;font-size:12px;outline:none;}
+.bar input{flex:1;min-width:120px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:8px 12px;color:var(--text);font-family:'DM Mono',monospace;
+  font-size:12px;outline:none;}
 .bar input:focus{border-color:var(--accent);}
 .bar input::placeholder{color:var(--muted);}
 .status{font-family:'DM Mono',monospace;font-size:10px;white-space:nowrap;}
 .status.ok{color:var(--success);}
 .status.err{color:var(--error);}
-
-/* Small buttons */
 .sbtn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);
-  border-radius:8px;padding:6px 12px;font-family:'DM Mono',monospace;font-size:10px;
-  cursor:pointer;white-space:nowrap;}
+  border-radius:8px;padding:6px 12px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;white-space:nowrap;}
 .sbtn:hover{border-color:var(--accent);color:var(--accent);}
-
-/* Tabs */
 .tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--border);
   border-radius:var(--radius);padding:4px;margin-bottom:20px;}
 .tab{flex:1;padding:10px 8px;border:none;background:transparent;color:var(--muted);
-  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;
-  border-radius:9px;transition:all .15s;}
+  font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border-radius:9px;transition:all .15s;}
 .tab.active{background:var(--surface2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.4);}
 .panel{display:none;}
 .panel.active{display:block;}
-
-/* Drop zone */
 .dropzone{border:1.5px dashed var(--border);border-radius:var(--radius);
   padding:40px 24px;text-align:center;cursor:pointer;background:var(--surface);
   margin-bottom:14px;transition:border-color .2s;}
@@ -61,22 +51,16 @@ h1 span{color:var(--accent);font-weight:600;}
 .dropzone.has{border-color:var(--success);border-style:solid;}
 .dz-label{font-size:14px;font-weight:500;margin-bottom:4px;}
 .dz-sub{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;}
-.dz-file{font-family:'DM Mono',monospace;font-size:12px;color:var(--success);
-  margin-top:6px;display:none;}
+.dz-file{font-family:'DM Mono',monospace;font-size:12px;color:var(--success);margin-top:6px;display:none;}
 .dropzone.has .dz-file{display:block;}
 input[type=file]{display:none;}
-
-/* Big buttons */
-.btn{width:100%;padding:14px;border:none;border-radius:var(--radius);
-  font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:12px;
-  transition:opacity .15s;}
+.btn{width:100%;padding:14px;border:none;border-radius:var(--radius);font-family:'DM Sans',sans-serif;
+  font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;gap:8px;margin-bottom:12px;transition:opacity .15s;}
 .btn:disabled{opacity:.4;cursor:not-allowed;}
 .btn-y{background:var(--accent);color:#0e0e0f;}
 .btn-o{background:var(--accent2);color:#fff;}
 .btn-g{background:transparent;color:var(--success);border:1.5px solid var(--success);}
-
-/* Log */
 .log{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
   padding:14px 18px;font-family:'DM Mono',monospace;font-size:11px;line-height:2;
   display:none;max-height:200px;overflow-y:auto;margin-bottom:12px;}
@@ -85,58 +69,49 @@ input[type=file]{display:none;}
 .l-warn{color:var(--warn);}
 .l-err{color:var(--error);}
 .l-head{color:var(--text);font-weight:500;}
-
-/* Queue grid */
 .q-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:8px;margin-bottom:14px;}
 .q-thumb{position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;background:var(--surface);}
 .q-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
-.q-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-size:20px;background:rgba(0,0,0,.5);}
-.q-rm{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.7);border:none;
-  color:#fff;border-radius:50%;width:18px;height:18px;font-size:9px;cursor:pointer;
+.q-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;background:rgba(0,0,0,.5);}
+.q-rm{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.7);border:none;color:#fff;
+  border-radius:50%;width:18px;height:18px;font-size:9px;cursor:pointer;
   display:flex;align-items:center;justify-content:center;}
-
-/* Progress */
 .prog{margin-bottom:14px;display:none;}
 .prog.on{display:block;}
 .prog-row{display:flex;justify-content:space-between;margin-bottom:5px;
   font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
 .prog-bar{background:var(--surface);border-radius:4px;height:4px;overflow:hidden;}
 .prog-fill{height:100%;background:var(--accent);width:0%;border-radius:4px;transition:width .3s;}
-
-/* Saved list */
 .saved{display:none;margin-top:6px;}
 .saved.on{display:block;}
 .saved-hdr{display:flex;justify-content:space-between;align-items:center;
   font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
   color:var(--muted);margin-bottom:8px;}
-.saved-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  overflow:hidden;margin-bottom:10px;}
-.saved-row{display:flex;align-items:center;gap:10px;padding:10px 14px;
-  border-bottom:1px solid var(--border);font-size:12px;}
+.saved-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:10px;}
+.saved-row{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;}
 .saved-row:last-child{border-bottom:none;}
 .saved-info{flex:1;min-width:0;}
 .saved-title{font-family:'DM Mono',monospace;color:var(--text);margin-bottom:2px;}
 .saved-meta{color:var(--muted);font-size:11px;}
 .saved-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:4px;}
 .saved-del:hover{color:var(--error);}
-
-/* Spinner */
 .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.2);
   border-top-color:#fff;border-radius:50%;animation:sp .6s linear infinite;}
 @keyframes sp{to{transform:rotate(360deg)}}
-
-/* Steps */
 .steps{margin-top:32px;border-top:1px solid var(--border);padding-top:24px;}
 .step{display:flex;gap:12px;margin-bottom:12px;font-size:12px;color:var(--muted);line-height:1.5;}
 .step-n{width:20px;height:20px;border-radius:50%;background:var(--surface);border:1px solid var(--border);
   flex-shrink:0;display:flex;align-items:center;justify-content:center;
   font-family:'DM Mono',monospace;font-size:9px;color:var(--accent);margin-top:1px;}
 .step strong{color:var(--text);}
-
-.error-box{display:none;font-family:'DM Mono',monospace;font-size:11px;padding:8px 12px;
-  border-radius:8px;margin-bottom:10px;background:rgba(248,113,113,.1);
-  color:var(--error);border-left:3px solid var(--error);}
+.info-box{font-family:'DM Mono',monospace;font-size:11px;padding:10px 14px;border-radius:8px;
+  margin-bottom:12px;background:rgba(232,197,71,.08);color:var(--accent);
+  border-left:3px solid var(--accent);line-height:1.7;display:none;}
+.info-box.on{display:block;}
+.sheet-links{display:none;gap:16px;flex-wrap:wrap;margin-bottom:14px;
+  font-family:'DM Mono',monospace;font-size:11px;}
+.sheet-links.on{display:flex;}
+.sheet-links a{color:var(--success);text-decoration:none;}
 </style>
 </head>
 <body>
@@ -152,7 +127,7 @@ input[type=file]{display:none;}
   <label>API Key</label>
   <input type="password" id="apiKey" placeholder="sk-ant-api03-…" autocomplete="off">
   <span class="status" id="apiStatus">not set</span>
-  <button class="sbtn" id="testBtn" onclick="testKey()">Test Key</button>
+  <button class="sbtn" onclick="testKey()">Test Key</button>
 </div>
 
 <!-- Tabs -->
@@ -177,25 +152,24 @@ input[type=file]{display:none;}
 <!-- SCAN PANEL -->
 <div class="panel" id="panel-scan">
 
-  <!-- Drive -->
+  <!-- Script URL -->
   <div class="bar">
-    <label>Google Drive</label>
-    <input type="text" id="clientId" placeholder="Client ID (.apps.googleusercontent.com)">
-    <span class="status" id="driveStatus">not connected</span>
-    <button class="sbtn" id="driveBtn" onclick="connectDrive()">Connect</button>
-    <button class="sbtn" id="disconnectBtn" style="display:none" onclick="disconnectDrive()">Disconnect</button>
+    <label>Script URL</label>
+    <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/…/exec">
+    <span class="status" id="scriptStatus">not connected</span>
+    <button class="sbtn" onclick="testScript()">Test</button>
   </div>
-  <div class="error-box" id="driveErr"></div>
 
-  <!-- Drive folder -->
-  <div class="bar" id="folderBar" style="display:none">
-    <label>Folder</label>
-    <input type="text" id="folderName" value="Color Lab Tag Photos">
-    <span class="status" id="sheetStatus" style="color:var(--muted)">sheets loading…</span>
+  <div class="info-box" id="scriptInfo">
+    No script connected — Drive upload and Sheet sync disabled. Scan still works, CSV export available.
   </div>
 
   <!-- Sheet links -->
-  <div id="sheetLinks" style="display:none;margin-bottom:14px;font-family:'DM Mono',monospace;font-size:11px;display:flex;gap:16px;flex-wrap:wrap;"></div>
+  <div class="sheet-links" id="sheetLinks">
+    <span style="color:var(--muted)">Sheets:</span>
+    <a id="regLink" href="#" target="_blank">↗ Plate Registry</a>
+    <a id="libLink" href="#" target="_blank">↗ Color Library</a>
+  </div>
 
   <!-- Image zone -->
   <div class="dropzone" id="scanZone" onclick="document.getElementById('scanFiles').click()">
@@ -222,7 +196,6 @@ input[type=file]{display:none;}
 
   <div class="log" id="scanLog"></div>
 
-  <!-- Results -->
   <div class="saved" id="savedWrap">
     <div class="saved-hdr">
       <span>Saved — <span id="savedCount">0</span> plates</span>
@@ -233,24 +206,22 @@ input[type=file]{display:none;}
   </div>
 
   <div class="steps">
-    <div class="step"><div class="step-n">1</div><div><strong>Connect Google Drive</strong> — paste your OAuth Client ID and click Connect</div></div>
-    <div class="step"><div class="step-n">2</div><div><strong>Select tag photos</strong> — multiple at once from camera or library</div></div>
-    <div class="step"><div class="step-n">3</div><div><strong>Scan All</strong> — Claude reads each tag and extracts Plate ID, Name, Series, Date</div></div>
-    <div class="step"><div class="step-n">4</div><div><strong>Images upload to Drive</strong> renamed as JK-3037_Gold.jpg and rows go to your Sheet</div></div>
-    <div class="step"><div class="step-n">5</div><div><strong>Download CSV</strong> to import into Airtable Plate Registry</div></div>
+    <div class="step"><div class="step-n">1</div><div><strong>Deploy the Apps Script</strong> — follow the setup guide, paste the URL above and click Test</div></div>
+    <div class="step"><div class="step-n">2</div><div><strong>Select tag photos</strong> — multiple at once from camera or photo library</div></div>
+    <div class="step"><div class="step-n">3</div><div><strong>Scan All</strong> — Claude reads each tag, extracts Plate ID, Name, Series, Date</div></div>
+    <div class="step"><div class="step-n">4</div><div><strong>Images save to Drive</strong> renamed as JK-3037_Gold.jpg · rows go to Plate Registry sheet</div></div>
+    <div class="step"><div class="step-n">5</div><div><strong>Download CSV</strong> for Airtable import · or use the sheet links above</div></div>
   </div>
 
-</div><!-- /scan panel -->
-</div><!-- /wrap -->
+</div>
+</div>
 
 <script>
 // ─── API KEY ───────────────────────────────────────────────────────────────
 var apiKeyEl = document.getElementById('apiKey');
 var apiStatusEl = document.getElementById('apiStatus');
 
-function getKey() {
-  return apiKeyEl.value.trim() || localStorage.getItem('lrg_api_key') || '';
-}
+function getKey() { return apiKeyEl.value.trim() || localStorage.getItem('lrg_api_key') || ''; }
 
 apiKeyEl.addEventListener('input', function() {
   var k = apiKeyEl.value.trim();
@@ -261,22 +232,24 @@ apiKeyEl.addEventListener('input', function() {
 
 function testKey() {
   var key = getKey();
-  var btn = document.getElementById('testBtn');
-  if (!key) { alert('Paste your API key first'); return; }
-  btn.textContent = 'Testing…';
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': key,
-      'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-    body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 10, messages: [{ role: 'user', content: 'Hi' }] })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(d) {
-    btn.textContent = 'Test Key';
-    if (d.content) { apiStatusEl.textContent = '✓ valid'; apiStatusEl.className = 'status ok'; }
-    else { apiStatusEl.textContent = '✗ invalid'; apiStatusEl.className = 'status err'; }
-  })
-  .catch(function() { btn.textContent = 'Test Key'; apiStatusEl.textContent = '✗ error'; apiStatusEl.className = 'status err'; });
+  if (!key) { alert('Paste your Anthropic API key first'); return; }
+  apiStatusEl.textContent = 'testing…';
+  scriptPost({ action: 'ping' }); // just to warm up
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', 'https://api.anthropic.com/v1/messages');
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.setRequestHeader('x-api-key', key);
+  xhr.setRequestHeader('anthropic-version', '2023-06-01');
+  xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
+  xhr.onload = function() {
+    try {
+      var d = JSON.parse(xhr.responseText);
+      if (d.content) { apiStatusEl.textContent = '✓ valid'; apiStatusEl.className = 'status ok'; }
+      else { apiStatusEl.textContent = '✗ invalid'; apiStatusEl.className = 'status err'; }
+    } catch(e) { apiStatusEl.textContent = '✗ error'; apiStatusEl.className = 'status err'; }
+  };
+  xhr.onerror = function() { apiStatusEl.textContent = '✗ network error'; apiStatusEl.className = 'status err'; };
+  xhr.send(JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 10, messages: [{ role: 'user', content: 'Hi' }] }));
 }
 
 // ─── TABS ──────────────────────────────────────────────────────────────────
@@ -290,11 +263,78 @@ function switchTab(name) {
   }
 }
 
+// ─── APPS SCRIPT ──────────────────────────────────────────────────────────
+var scriptUrlEl = document.getElementById('scriptUrl');
+var scriptStatusEl = document.getElementById('scriptStatus');
+
+function getScriptUrl() { return scriptUrlEl.value.trim() || localStorage.getItem('lrg_script_url') || ''; }
+
+scriptUrlEl.addEventListener('input', function() {
+  var u = scriptUrlEl.value.trim();
+  if (u) localStorage.setItem('lrg_script_url', u);
+  updateScriptUI();
+});
+
+function updateScriptUI() {
+  var url = getScriptUrl();
+  var infoBox = document.getElementById('scriptInfo');
+  if (url && url.indexOf('script.google.com') > -1) {
+    infoBox.style.display = 'none';
+  } else {
+    infoBox.classList.add('on');
+  }
+}
+
+function scriptPost(data, cb) {
+  var url = getScriptUrl();
+  if (!url) { if (cb) cb('no script url'); return; }
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', url);
+  xhr.setRequestHeader('Content-Type', 'text/plain'); // Apps Script requires text/plain for CORS
+  xhr.onload = function() {
+    try { var d = JSON.parse(xhr.responseText); if (cb) cb(null, d); }
+    catch(e) { if (cb) cb('parse error'); }
+  };
+  xhr.onerror = function() { if (cb) cb('network error'); };
+  xhr.send(JSON.stringify(data));
+}
+
+function testScript() {
+  var url = getScriptUrl();
+  if (!url) { alert('Paste your Apps Script URL first'); return; }
+  scriptStatusEl.textContent = 'testing…';
+  scriptStatusEl.className = 'status';
+  scriptPost({ action: 'ping' }, function(err, d) {
+    if (err || !d || !d.ok) {
+      scriptStatusEl.textContent = '✗ failed';
+      scriptStatusEl.className = 'status err';
+      return;
+    }
+    scriptStatusEl.textContent = '✓ connected';
+    scriptStatusEl.className = 'status ok';
+    document.getElementById('scriptInfo').style.display = 'none';
+    loadSheetUrls();
+  });
+}
+
+function loadSheetUrls() {
+  scriptPost({ action: 'getSheetUrls' }, function(err, d) {
+    if (err || !d || !d.ok) return;
+    var linksEl = document.getElementById('sheetLinks');
+    if (d.registryUrl) {
+      document.getElementById('regLink').href = d.registryUrl;
+      linksEl.classList.add('on');
+    }
+    if (d.libraryUrl) {
+      document.getElementById('libLink').href = d.libraryUrl;
+      linksEl.classList.add('on');
+    }
+  });
+}
+
 // ─── NX2 CONVERT ──────────────────────────────────────────────────────────
 var nx2FileEl = document.getElementById('nx2File');
 var dropZone = document.getElementById('dropZone');
-var convertBtn = document.getElementById('convertBtn');
-var convertLog = document.getElementById('convertLog');
 var nx2Data = null;
 
 nx2FileEl.addEventListener('change', function() { setNX2(nx2FileEl.files[0]); });
@@ -302,8 +342,7 @@ dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone
 dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('over'); });
 dropZone.addEventListener('drop', function(e) {
   e.preventDefault(); dropZone.classList.remove('over');
-  var f = e.dataTransfer.files[0];
-  if (f) setNX2(f);
+  if (e.dataTransfer.files[0]) setNX2(e.dataTransfer.files[0]);
 });
 
 function setNX2(f) {
@@ -311,18 +350,18 @@ function setNX2(f) {
   nx2Data = f;
   document.getElementById('nx2Name').textContent = f.name;
   dropZone.classList.add('has');
-  convertBtn.disabled = false;
+  document.getElementById('convertBtn').disabled = false;
   document.getElementById('convertDl').style.display = 'none';
-  convertLog.innerHTML = ''; convertLog.classList.remove('on');
+  var log = document.getElementById('convertLog');
+  log.innerHTML = ''; log.classList.remove('on');
 }
 
 function clog(msg, cls) {
+  var log = document.getElementById('convertLog');
   var d = document.createElement('div');
-  d.className = cls || '';
+  if (cls) d.className = cls;
   d.textContent = msg;
-  convertLog.appendChild(d);
-  convertLog.scrollTop = convertLog.scrollHeight;
-  convertLog.classList.add('on');
+  log.appendChild(d); log.scrollTop = log.scrollHeight; log.classList.add('on');
 }
 
 var ID_RE = /^([A-Z]{1,3})[_#\s](\d{2,4})(?:-(\d+))?/i;
@@ -333,534 +372,298 @@ function cleanId(raw) {
 }
 function cleanName(raw) {
   var s = raw.trim().replace(ID_RE, '').replace(/^[-\u2013_\s]+/, '');
-  var patterns = [/\s+replacement\s+for\s+\S+/gi, /\s+V\d{2}-V\d{2}.*$/gi,
+  var pp = [/\s+replacement\s+for\s+\S+/gi, /\s+V\d{2}-V\d{2}.*$/gi,
     /\s+\+[\d.]+g.*$/gi, /\s+from\s+alt\s+swatch.*$/gi, /\s*\([^)]*\)/g, /\s+MC\d+.*$/gi];
-  for (var i = 0; i < patterns.length; i++) s = s.replace(patterns[i], '');
+  for (var i = 0; i < pp.length; i++) s = s.replace(pp[i], '');
   s = s.replace(/[-\u2013_\s]+$/, '').trim();
   return s ? s.replace(/\b\w/g, function(c) { return c.toUpperCase(); }) : raw.trim();
 }
 function posLabel(n) {
-  return n <= 2 ? 'Light' : n <= 4 ? 'Light-Mid' : n === 5 ? 'Mid-Light' :
-    n === 6 ? 'Mid' : n <= 8 ? 'Mid-Dark' : n <= 10 ? 'Dark' : 'Darkest';
+  return n<=2?'Light':n<=4?'Light-Mid':n===5?'Mid-Light':n===6?'Mid':n<=8?'Mid-Dark':n<=10?'Dark':'Darkest';
 }
-function sv(v) { return (v == null || v === '---') ? '' : String(v); }
+function sv(v) { return (v==null||v==='---')?'':String(v); }
 
 function parseNX2(wb) {
-  var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: null });
-  var out = [], series = '', plateRows = [], prevPid = null;
-  for (var ri = 0; ri < rows.length; ri++) {
-    var row = rows[ri];
-    var v = row.slice(0, 10);
-    while (v.length < 10) v.push(null);
-    if (v[0] === 'Data Name') continue;
-    var isGrp = v[0] && v[0] !== 'Data Name' && v.slice(1, 8).every(function(x) { return x == null; });
-    var isDat = v[0] && v[5] != null;
-    if (isGrp) { series = String(v[0]).trim().replace(/\b\w/g, function(c) { return c.toUpperCase(); }); continue; }
-    if (isDat) {
-      var raw = String(v[0]).trim(), pid = cleanId(raw);
-      if (pid !== prevPid && plateRows.length) {
-        for (var pi = 0; pi < plateRows.length; pi++) {
-          var pr = plateRows[pi], n = pi + 1, sec = 'S' + (n < 10 ? '0' : '') + n;
-          var opid = cleanId(pr.raw), opname = cleanName(pr.raw);
-          out.push({ 'Sample Title': opid + ' \u2013 ' + opname + ' \u2013 ' + sec,
-            'Series / Project': series, 'Plate ID': opid, 'Plate Name': opname,
-            'Plate Type': '', 'Section': sec, 'Section #': n, 'Position': posLabel(n),
-            'L*': pr.L, 'a*': pr.a, 'b*': pr.b, '\u0394E00': pr.dE, '\u0394L*': pr.dL,
-            '\u0394a*': pr.da, '\u0394b*': pr.db, 'Judgement': pr.j, 'Group Traits': pr.t,
-            'Notes': plateRows.length !== 11 ? 'REVIEW: not 11 readings' : '' });
+  var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:null});
+  var out=[], series='', plateRows=[], prevPid=null;
+  for (var ri=0; ri<rows.length; ri++) {
+    var v = rows[ri].slice(0,10);
+    while(v.length<10) v.push(null);
+    if(v[0]==='Data Name') continue;
+    var isGrp = v[0] && v[0]!=='Data Name' && v.slice(1,8).every(function(x){return x==null;});
+    var isDat = v[0] && v[5]!=null;
+    if(isGrp){ series=String(v[0]).trim().replace(/\b\w/g,function(c){return c.toUpperCase();}); continue; }
+    if(isDat){
+      var raw=String(v[0]).trim(), pid=cleanId(raw);
+      if(pid!==prevPid && plateRows.length){
+        for(var pi=0;pi<plateRows.length;pi++){
+          var pr=plateRows[pi],n=pi+1,sec='S'+(n<10?'0':'')+n;
+          var op=cleanId(pr.raw),on=cleanName(pr.raw);
+          out.push({'Sample Title':op+' \u2013 '+on+' \u2013 '+sec,'Series / Project':series,
+            'Plate ID':op,'Plate Name':on,'Plate Type':'','Section':sec,'Section #':n,'Position':posLabel(n),
+            'L*':pr.L,'a*':pr.a,'b*':pr.b,'\u0394E00':pr.dE,'\u0394L*':pr.dL,'\u0394a*':pr.da,'\u0394b*':pr.db,
+            'Judgement':pr.j,'Group Traits':pr.t,'Notes':plateRows.length!==11?'REVIEW: not 11 readings':''});
         }
-        plateRows = [];
+        plateRows=[];
       }
-      prevPid = pid;
-      plateRows.push({ raw: raw, dE: sv(v[1]), dL: sv(v[2]), da: sv(v[3]), db: sv(v[4]),
-        L: sv(v[5]), a: sv(v[6]), b: sv(v[7]), j: sv(v[8]), t: sv(v[9]) });
+      prevPid=pid;
+      plateRows.push({raw:raw,dE:sv(v[1]),dL:sv(v[2]),da:sv(v[3]),db:sv(v[4]),
+        L:sv(v[5]),a:sv(v[6]),b:sv(v[7]),j:sv(v[8]),t:sv(v[9])});
     }
   }
-  if (plateRows.length) {
-    for (var pi2 = 0; pi2 < plateRows.length; pi2++) {
-      var pr2 = plateRows[pi2], n2 = pi2 + 1, sec2 = 'S' + (n2 < 10 ? '0' : '') + n2;
-      var opid2 = cleanId(pr2.raw), opname2 = cleanName(pr2.raw);
-      out.push({ 'Sample Title': opid2 + ' \u2013 ' + opname2 + ' \u2013 ' + sec2,
-        'Series / Project': series, 'Plate ID': opid2, 'Plate Name': opname2,
-        'Plate Type': '', 'Section': sec2, 'Section #': n2, 'Position': posLabel(n2),
-        'L*': pr2.L, 'a*': pr2.a, 'b*': pr2.b, '\u0394E00': pr2.dE, '\u0394L*': pr2.dL,
-        '\u0394a*': pr2.da, '\u0394b*': pr2.db, 'Judgement': pr2.j, 'Group Traits': pr2.t,
-        'Notes': plateRows.length !== 11 ? 'REVIEW: not 11 readings' : '' });
+  if(plateRows.length){
+    for(var pi2=0;pi2<plateRows.length;pi2++){
+      var pr2=plateRows[pi2],n2=pi2+1,sec2='S'+(n2<10?'0':'')+n2;
+      var op2=cleanId(pr2.raw),on2=cleanName(pr2.raw);
+      out.push({'Sample Title':op2+' \u2013 '+on2+' \u2013 '+sec2,'Series / Project':series,
+        'Plate ID':op2,'Plate Name':on2,'Plate Type':'','Section':sec2,'Section #':n2,'Position':posLabel(n2),
+        'L*':pr2.L,'a*':pr2.a,'b*':pr2.b,'\u0394E00':pr2.dE,'\u0394L*':pr2.dL,'\u0394a*':pr2.da,'\u0394b*':pr2.db,
+        'Judgement':pr2.j,'Group Traits':pr2.t,'Notes':plateRows.length!==11?'REVIEW: not 11 readings':''});
     }
   }
   return out;
 }
 
-var LIB_FIELDS = ['Sample Title','Series / Project','Plate ID','Plate Name','Plate Type',
+var LIB_FIELDS=['Sample Title','Series / Project','Plate ID','Plate Name','Plate Type',
   'Section','Section #','Position','L*','a*','b*','\u0394E00','\u0394L*','\u0394a*','\u0394b*','Judgement','Group Traits','Notes'];
 
 function toCSV(records, fields) {
-  function esc(v) { return '"' + String(v != null ? v : '').replace(/"/g, '""') + '"'; }
-  var lines = [fields.map(esc).join(',')];
-  for (var i = 0; i < records.length; i++) {
-    lines.push(fields.map(function(f) { return esc(records[i][f]); }).join(','));
-  }
+  function esc(v){ return '"'+String(v!=null?v:'').replace(/"/g,'""')+'"'; }
+  var lines=[fields.map(esc).join(',')];
+  for(var i=0;i<records.length;i++) lines.push(fields.map(function(f){return esc(records[i][f]);}).join(','));
   return lines.join('\r\n');
 }
 
 function doConvert() {
-  if (!nx2Data) return;
-  convertLog.innerHTML = ''; convertLog.classList.add('on');
-  document.getElementById('convertDl').style.display = 'none';
-  clog('Reading ' + nx2Data.name + '…', 'l-head');
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      var wb = XLSX.read(e.target.result, { type: 'array' });
-      clog('Sheet: ' + wb.SheetNames[0], 'l-ok');
-      var recs = parseNX2(wb);
-      clog(recs.length + ' section records parsed', 'l-ok');
-      var plates = {};
-      for (var i = 0; i < recs.length; i++) {
-        var pid = recs[i]['Plate ID'];
-        plates[pid] = (plates[pid] || 0) + 1;
+  if(!nx2Data) return;
+  var log=document.getElementById('convertLog');
+  log.innerHTML=''; log.classList.add('on');
+  document.getElementById('convertDl').style.display='none';
+  clog('Reading '+nx2Data.name+'…','l-head');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array'});
+      clog('Sheet: '+wb.SheetNames[0],'l-ok');
+      var recs=parseNX2(wb);
+      clog(recs.length+' section records parsed','l-ok');
+      var plates={};
+      for(var i=0;i<recs.length;i++){ var p=recs[i]['Plate ID']; plates[p]=(plates[p]||0)+1; }
+      var pkeys=Object.keys(plates);
+      for(var j=0;j<pkeys.length;j++){
+        var c=plates[pkeys[j]];
+        clog('  '+pkeys[j]+' \u2192 '+c+' section'+(c>1?'s':'')+(c!==11?' \u26a0':''),c!==11?'l-warn':'');
       }
-      var pkeys = Object.keys(plates);
-      for (var j = 0; j < pkeys.length; j++) {
-        var c = plates[pkeys[j]];
-        clog('  ' + pkeys[j] + ' \u2192 ' + c + ' section' + (c > 1 ? 's' : '') + (c !== 11 ? ' \u26a0' : ''), c !== 11 ? 'l-warn' : '');
-      }
-      var csv = toCSV(recs, LIB_FIELDS);
-      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      var dl = document.getElementById('convertDl');
-      dl.href = URL.createObjectURL(blob);
-      dl.style.display = 'flex';
-      clog('\u2713 Ready \u2014 click Download', 'l-ok');
-      // Append to sheet if connected
-      if (driveToken && sheetIds['lib']) {
-        clog('Appending to Color Library sheet\u2026', '');
-        appendBatch('lib', LIB_FIELDS, recs, function(err) {
-          if (err) clog('\u26a0 Sheet append failed: ' + err, 'l-warn');
-          else clog('\u2713 ' + recs.length + ' rows added to Color Library', 'l-ok');
+      var csv=toCSV(recs,LIB_FIELDS);
+      var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      var dl=document.getElementById('convertDl');
+      dl.href=URL.createObjectURL(blob); dl.style.display='flex';
+      clog('\u2713 Ready \u2014 click Download','l-ok');
+      // Send to sheet if script connected
+      var surl=getScriptUrl();
+      if(surl){
+        clog('Sending to Color Library sheet\u2026','');
+        scriptPost({action:'appendLibrary',rows:recs},function(err,d){
+          if(err||!d||!d.ok) clog('\u26a0 Sheet sync failed','l-warn');
+          else clog('\u2713 '+recs.length+' rows added to Color Library','l-ok');
         });
       }
-    } catch(err) { clog('\u2717 ' + err.message, 'l-err'); }
+    }catch(err){clog('\u2717 '+err.message,'l-err');}
   };
   reader.readAsArrayBuffer(nx2Data);
 }
 
-// ─── GOOGLE DRIVE / SHEETS ─────────────────────────────────────────────────
-var driveToken = null;
-var folderId = null;
-var sheetIds = {};
-var SCOPE = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/spreadsheets';
-
-var REG_FIELDS = ['Plate ID','Plate Name','Series / Project','Plate Type',
-  'Date / Batch','Substrate / Base','Total Sections','Status','Notes','Image File','Drive Link'];
-
-function loadGIS(cb) {
-  if (window.google && window.google.accounts) { cb(); return; }
-  var s = document.createElement('script');
-  s.src = 'https://accounts.google.com/gsi/client';
-  s.onload = cb;
-  document.head.appendChild(s);
-}
-
-function connectDrive() {
-  var cid = document.getElementById('clientId').value.trim()
-    || localStorage.getItem('lrg_cid') || '';
-  var errEl = document.getElementById('driveErr');
-  errEl.style.display = 'none';
-  if (!cid) { showDriveErr('Paste your Client ID first'); return; }
-  if (cid.indexOf('.apps.googleusercontent.com') < 0) {
-    showDriveErr('Client ID should end in .apps.googleusercontent.com'); return;
-  }
-  localStorage.setItem('lrg_cid', cid);
-  document.getElementById('clientId').value = cid;
-  loadGIS(function() {
-    var client = google.accounts.oauth2.initTokenClient({
-      client_id: cid, scope: SCOPE,
-      callback: function(resp) {
-        if (resp.error) {
-          showDriveErr('Auth error: ' + resp.error + ' — check Client ID and authorized origins');
-          return;
-        }
-        driveToken = resp.access_token;
-        setDriveUI(true);
-        initSheets();
-      }
-    });
-    client.requestAccessToken();
-  });
-}
-
-function disconnectDrive() {
-  driveToken = null; folderId = null; sheetIds = {};
-  setDriveUI(false);
-}
-
-function setDriveUI(on) {
-  document.getElementById('driveStatus').textContent = on ? '\u2713 connected' : 'not connected';
-  document.getElementById('driveStatus').className = on ? 'status ok' : 'status';
-  document.getElementById('driveBtn').style.display = on ? 'none' : '';
-  document.getElementById('disconnectBtn').style.display = on ? '' : 'none';
-  document.getElementById('folderBar').style.display = on ? 'flex' : 'none';
-}
-
-function showDriveErr(msg) {
-  var el = document.getElementById('driveErr');
-  el.textContent = '\u2717 ' + msg;
-  el.style.display = 'block';
-}
-
-function apiReq(method, url, body, token, cb) {
-  var xhr = new XMLHttpRequest();
-  xhr.open(method, url);
-  xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-  if (body) xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.onload = function() {
-    try { cb(null, JSON.parse(xhr.responseText)); }
-    catch(e) { cb('Parse error'); }
-  };
-  xhr.onerror = function() { cb('Network error'); };
-  xhr.send(body ? JSON.stringify(body) : null);
-}
-
-function initSheets() {
-  var statusEl = document.getElementById('sheetStatus');
-  statusEl.textContent = 'creating sheets\u2026';
-  getOrCreateSheet('LRG Color Lab \u2014 Plate Registry', REG_FIELDS, 'reg', function(err, id) {
-    if (err) { statusEl.textContent = '\u2717 sheet error'; return; }
-    sheetIds['reg'] = id;
-    getOrCreateSheet('LRG Color Lab \u2014 Color Library', LIB_FIELDS, 'lib', function(err2, id2) {
-      if (err2) { statusEl.textContent = '\u2717 sheet error'; return; }
-      sheetIds['lib'] = id2;
-      statusEl.textContent = '\u2713 sheets ready';
-      statusEl.className = 'status ok';
-      renderSheetLinks();
-    });
-  });
-}
-
-function getOrCreateSheet(name, headers, key, cb) {
-  var saved = localStorage.getItem('lrg_sheet_' + key);
-  if (saved) {
-    apiReq('GET', 'https://sheets.googleapis.com/v4/spreadsheets/' + saved + '?fields=spreadsheetId',
-      null, driveToken, function(err, d) {
-        if (!err && d && d.spreadsheetId) { cb(null, saved); }
-        else { createSheet(name, headers, key, cb); }
-      });
-  } else {
-    createSheet(name, headers, key, cb);
-  }
-}
-
-function createSheet(name, headers, key, cb) {
-  apiReq('POST', 'https://sheets.googleapis.com/v4/spreadsheets',
-    { properties: { title: name }, sheets: [{ properties: { title: 'Data' } }] },
-    driveToken, function(err, d) {
-      if (err || !d || !d.spreadsheetId) { cb('create failed'); return; }
-      var id = d.spreadsheetId;
-      localStorage.setItem('lrg_sheet_' + key, id);
-      apiReq('PUT', 'https://sheets.googleapis.com/v4/spreadsheets/' + id + '/values/Data!A1?valueInputOption=RAW',
-        { values: [headers] }, driveToken, function() { cb(null, id); });
-    });
-}
-
-function appendRow(key, values, cb) {
-  var id = sheetIds[key] || localStorage.getItem('lrg_sheet_' + key);
-  if (!id) { if (cb) cb('no sheet'); return; }
-  apiReq('POST', 'https://sheets.googleapis.com/v4/spreadsheets/' + id +
-    '/values/Data!A1:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS',
-    { values: [values] }, driveToken, function(err) { if (cb) cb(err); });
-}
-
-function appendBatch(key, fields, records, cb) {
-  var i = 0;
-  function next() {
-    if (i >= records.length) { cb(null); return; }
-    var rec = records[i++];
-    var vals = fields.map(function(f) { return rec[f] != null ? rec[f] : ''; });
-    appendRow(key, vals, function(err) {
-      if (err) { cb(err); return; }
-      setTimeout(next, 100);
-    });
-  }
-  next();
-}
-
-function renderSheetLinks() {
-  var el = document.getElementById('sheetLinks');
-  var regId = sheetIds['reg'] || localStorage.getItem('lrg_sheet_reg');
-  var libId = sheetIds['lib'] || localStorage.getItem('lrg_sheet_lib');
-  el.innerHTML = '';
-  if (regId) {
-    var a1 = document.createElement('a');
-    a1.href = 'https://docs.google.com/spreadsheets/d/' + regId;
-    a1.target = '_blank';
-    a1.style.cssText = 'color:var(--success);text-decoration:none;font-family:"DM Mono",monospace;font-size:11px;';
-    a1.textContent = '\u2197 Plate Registry';
-    el.appendChild(a1);
-  }
-  if (libId) {
-    var a2 = document.createElement('a');
-    a2.href = 'https://docs.google.com/spreadsheets/d/' + libId;
-    a2.target = '_blank';
-    a2.style.cssText = 'color:var(--success);text-decoration:none;font-family:"DM Mono",monospace;font-size:11px;';
-    a2.textContent = '\u2197 Color Library';
-    el.appendChild(a2);
-  }
-  if (regId || libId) el.style.display = 'flex';
-}
-
-// ─── DRIVE UPLOAD ──────────────────────────────────────────────────────────
-function getOrCreateFolder(name, cb) {
-  if (folderId) { cb(null, folderId); return; }
-  var q = encodeURIComponent("name='" + name + "' and mimeType='application/vnd.google-apps.folder' and trashed=false");
-  apiReq('GET', 'https://www.googleapis.com/drive/v3/files?q=' + q + '&fields=files(id)',
-    null, driveToken, function(err, d) {
-      if (!err && d && d.files && d.files.length > 0) {
-        folderId = d.files[0].id; cb(null, folderId); return;
-      }
-      apiReq('POST', 'https://www.googleapis.com/drive/v3/files',
-        { name: name, mimeType: 'application/vnd.google-apps.folder' },
-        driveToken, function(err2, d2) {
-          if (err2 || !d2 || !d2.id) { cb('folder create failed'); return; }
-          folderId = d2.id; cb(null, folderId);
-        });
-    });
-}
-
-function uploadFile(b64, mimeType, filename, cb) {
-  var folderName = document.getElementById('folderName').value.trim() || 'Color Lab Tag Photos';
-  getOrCreateFolder(folderName, function(err, fid) {
-    if (err) { cb(err); return; }
-    var binary = atob(b64);
-    var bytes = new Uint8Array(binary.length);
-    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    var blob = new Blob([bytes], { type: mimeType });
-    var meta = JSON.stringify({ name: filename, parents: [fid] });
-    var form = new FormData();
-    form.append('metadata', new Blob([meta], { type: 'application/json' }));
-    form.append('file', blob);
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink');
-    xhr.setRequestHeader('Authorization', 'Bearer ' + driveToken);
-    xhr.onload = function() {
-      try { var d = JSON.parse(xhr.responseText); cb(null, d.webViewLink || ''); }
-      catch(e) { cb('upload parse error'); }
-    };
-    xhr.onerror = function() { cb('upload network error'); };
-    xhr.send(form);
-  });
-}
-
 // ─── IMAGE QUEUE ───────────────────────────────────────────────────────────
-var imageQueue = [];
+var imageQueue=[];
 
-document.getElementById('scanFiles').addEventListener('change', function(e) {
-  var files = Array.from(e.target.files);
-  var i = 0;
-  function readNext() {
-    if (i >= files.length) { renderQueue(); return; }
-    var file = files[i++];
-    var reader = new FileReader();
-    reader.onload = function(ev) {
-      var dataUrl = ev.target.result;
-      imageQueue.push({ file: file, b64: dataUrl.split(',')[1],
-        mime: file.type || 'image/jpeg', preview: dataUrl, status: 'pending' });
+document.getElementById('scanFiles').addEventListener('change',function(e){
+  var files=Array.from(e.target.files);
+  var i=0;
+  function readNext(){
+    if(i>=files.length){renderQueue();return;}
+    var file=files[i++];
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      imageQueue.push({file:file,b64:ev.target.result.split(',')[1],
+        mime:file.type||'image/jpeg',preview:ev.target.result,status:'pending'});
       readNext();
     };
     reader.readAsDataURL(file);
   }
   readNext();
-  e.target.value = '';
+  e.target.value='';
 });
 
-function renderQueue() {
-  var wrap = document.getElementById('queueWrap');
-  var grid = document.getElementById('qGrid');
-  var countEl = document.getElementById('qCount');
-  var btn = document.getElementById('scanBtn');
-  if (!imageQueue.length) { wrap.style.display = 'none'; btn.disabled = true; return; }
-  wrap.style.display = 'block';
-  countEl.textContent = imageQueue.length;
-  btn.disabled = !getKey();
-  var html = '';
-  for (var i = 0; i < imageQueue.length; i++) {
-    var img = imageQueue[i];
-    var overlay = '';
-    if (img.status === 'done') overlay = '<div class="q-overlay">\u2713</div>';
-    else if (img.status === 'error') overlay = '<div class="q-overlay">\u2717</div>';
-    else if (img.status === 'processing') overlay = '<div class="q-overlay"><div class="spin"></div></div>';
-    var rm = img.status === 'pending' ? '<button class="q-rm" onclick="removeImg(' + i + ')">\u2715</button>' : '';
-    html += '<div class="q-thumb"><img src="' + img.preview + '">' + overlay + rm + '</div>';
+function renderQueue(){
+  var wrap=document.getElementById('queueWrap');
+  var grid=document.getElementById('qGrid');
+  var countEl=document.getElementById('qCount');
+  var btn=document.getElementById('scanBtn');
+  if(!imageQueue.length){wrap.style.display='none';btn.disabled=true;return;}
+  wrap.style.display='block'; countEl.textContent=imageQueue.length; btn.disabled=!getKey();
+  var html='';
+  for(var i=0;i<imageQueue.length;i++){
+    var img=imageQueue[i];
+    var ov=img.status==='done'?'<div class="q-overlay">\u2713</div>':
+      img.status==='error'?'<div class="q-overlay">\u2717</div>':
+      img.status==='processing'?'<div class="q-overlay"><div class="spin"></div></div>':'';
+    var rm=img.status==='pending'?'<button class="q-rm" onclick="removeImg('+i+')">\u2715</button>':'';
+    html+='<div class="q-thumb"><img src="'+img.preview+'">'+ov+rm+'</div>';
   }
-  grid.innerHTML = html;
+  grid.innerHTML=html;
 }
 
-function removeImg(i) { imageQueue.splice(i, 1); renderQueue(); }
-function clearQueue() { imageQueue = []; renderQueue(); }
-
-function refreshScanBtn() {
-  var btn = document.getElementById('scanBtn');
-  if (btn) btn.disabled = !imageQueue.length || !getKey();
-}
+function removeImg(i){imageQueue.splice(i,1);renderQueue();}
+function clearQueue(){imageQueue=[];renderQueue();}
+function refreshScanBtn(){var btn=document.getElementById('scanBtn');if(btn)btn.disabled=!imageQueue.length||!getKey();}
 
 // ─── BATCH SCAN ────────────────────────────────────────────────────────────
-var savedRows = JSON.parse(localStorage.getItem('lrg_rows') || '[]');
+var savedRows=JSON.parse(localStorage.getItem('lrg_rows')||'[]');
 
-function slog(msg, cls) {
-  var log = document.getElementById('scanLog');
-  var d = document.createElement('div');
-  if (cls) d.className = cls;
-  d.textContent = msg;
-  log.appendChild(d);
-  log.scrollTop = log.scrollHeight;
-  log.classList.add('on');
+var REG_FIELDS=['Plate ID','Plate Name','Series / Project','Plate Type',
+  'Date / Batch','Substrate / Base','Total Sections','Status','Notes','Image File','Drive Link'];
+
+var SCAN_PROMPT='You are reading a physical color sample plate tag. Return ONLY a JSON object with keys: plate_id (e.g. JK-3037), plate_name (e.g. Gold), series (project name), date (any date or batch), notes (other text). No markdown, no explanation.';
+
+function slog(msg,cls){
+  var log=document.getElementById('scanLog');
+  var d=document.createElement('div');
+  if(cls) d.className=cls; d.textContent=msg;
+  log.appendChild(d); log.scrollTop=log.scrollHeight; log.classList.add('on');
 }
 
-var SCAN_PROMPT = 'You are reading a physical color sample plate tag. Return ONLY a JSON object with keys: plate_id (e.g. JK-3037), plate_name (e.g. Gold), series (project name), date (any date or batch), notes (other text). No markdown, no explanation.';
-
-function doScan() {
-  if (!imageQueue.length || !getKey()) return;
-  var key = getKey();
-  var pending = imageQueue.filter(function(img) { return img.status === 'pending'; });
-  var total = pending.length;
-  var done = 0;
-  document.getElementById('scanLog').innerHTML = '';
+function doScan(){
+  if(!imageQueue.length||!getKey()) return;
+  var key=getKey();
+  var pending=imageQueue.filter(function(img){return img.status==='pending';});
+  var total=pending.length, done=0;
+  document.getElementById('scanLog').innerHTML='';
   document.getElementById('prog').classList.add('on');
-  document.getElementById('scanBtn').disabled = true;
-  slog('Processing ' + total + ' image' + (total > 1 ? 's' : '') + '\u2026', 'l-head');
+  document.getElementById('scanBtn').disabled=true;
+  slog('Processing '+total+' image'+(total>1?'s':'')+'\u2026','l-head');
 
-  function processNext(idx) {
-    if (idx >= imageQueue.length) {
-      document.getElementById('progFill').style.width = '100%';
-      document.getElementById('progLabel').textContent = 'Done \u2014 ' + done + ' processed';
-      document.getElementById('progFrac').textContent = done + '/' + total;
-      document.getElementById('scanBtn').disabled = false;
-      slog('\u2713 Batch complete', 'l-ok');
-      return;
+  function processNext(idx){
+    if(idx>=imageQueue.length){
+      document.getElementById('progFill').style.width='100%';
+      document.getElementById('progLabel').textContent='Done \u2014 '+done+' processed';
+      document.getElementById('progFrac').textContent=done+'/'+total;
+      document.getElementById('scanBtn').disabled=false;
+      slog('\u2713 Batch complete','l-ok'); return;
     }
-    var img = imageQueue[idx];
-    if (img.status !== 'pending') { processNext(idx + 1); return; }
-    img.status = 'processing';
-    renderQueue();
-    document.getElementById('progLabel').textContent = 'Processing ' + (done + 1) + ' of ' + total + '\u2026';
-    document.getElementById('progFrac').textContent = done + '/' + total;
-    document.getElementById('progFill').style.width = Math.round(done / total * 100) + '%';
+    var img=imageQueue[idx];
+    if(img.status!=='pending'){processNext(idx+1);return;}
+    img.status='processing'; renderQueue();
+    document.getElementById('progLabel').textContent='Processing '+(done+1)+' of '+total+'\u2026';
+    document.getElementById('progFrac').textContent=done+'/'+total;
+    document.getElementById('progFill').style.width=Math.round(done/total*100)+'%';
 
-    var body = JSON.stringify({
-      model: 'claude-sonnet-4-20250514', max_tokens: 400,
-      messages: [{ role: 'user', content: [
-        { type: 'image', source: { type: 'base64', media_type: img.mime, data: img.b64 } },
-        { type: 'text', text: SCAN_PROMPT }
-      ]}]
-    });
-
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'https://api.anthropic.com/v1/messages');
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.setRequestHeader('x-api-key', key);
-    xhr.setRequestHeader('anthropic-version', '2023-06-01');
-    xhr.setRequestHeader('anthropic-dangerous-direct-browser-access', 'true');
-    xhr.onload = function() {
-      try {
-        var data = JSON.parse(xhr.responseText);
-        if (!data.content) throw new Error(data.error ? data.error.message : 'API error');
-        var raw = '';
-        for (var ci = 0; ci < data.content.length; ci++) {
-          if (data.content[ci].type === 'text') { raw = data.content[ci].text; break; }
+    var xhr=new XMLHttpRequest();
+    xhr.open('POST','https://api.anthropic.com/v1/messages');
+    xhr.setRequestHeader('Content-Type','application/json');
+    xhr.setRequestHeader('x-api-key',key);
+    xhr.setRequestHeader('anthropic-version','2023-06-01');
+    xhr.setRequestHeader('anthropic-dangerous-direct-browser-access','true');
+    xhr.onload=function(){
+      try{
+        var data=JSON.parse(xhr.responseText);
+        if(!data.content) throw new Error(data.error?data.error.message:'API error');
+        var raw='';
+        for(var ci=0;ci<data.content.length;ci++){
+          if(data.content[ci].type==='text'){raw=data.content[ci].text;break;}
         }
-        var parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
-        var pid = parsed.plate_id || ('PLATE-' + (idx + 1));
-        var pname = parsed.plate_name || 'Unknown';
-        var ext = img.file.name.split('.').pop() || 'jpg';
-        var filename = pid + '_' + pname.replace(/\s+/g, '_') + '.' + ext;
-        slog('\u2713 ' + pid + ' \u2013 ' + pname, 'l-ok');
-        var row = {
-          'Plate ID': pid, 'Plate Name': pname,
-          'Series / Project': parsed.series || '', 'Plate Type': '',
-          'Date / Batch': parsed.date || '', 'Substrate / Base': '',
-          'Total Sections': 11, 'Status': 'Active',
-          'Notes': parsed.notes || '', 'Image File': filename, 'Drive Link': ''
-        };
-        img.status = 'done';
-        done++;
-        renderQueue();
-        function afterDrive() {
+        var parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+        var pid=parsed.plate_id||('PLATE-'+(idx+1));
+        var pname=parsed.plate_name||'Unknown';
+        var ext=img.file.name.split('.').pop()||'jpg';
+        var filename=pid+'_'+pname.replace(/\s+/g,'_')+'.'+ext;
+        slog('\u2713 '+pid+' \u2013 '+pname,'l-ok');
+        var row={'Plate ID':pid,'Plate Name':pname,'Series / Project':parsed.series||'',
+          'Plate Type':'','Date / Batch':parsed.date||'','Substrate / Base':'',
+          'Total Sections':11,'Status':'Active','Notes':parsed.notes||'',
+          'Image File':filename,'Drive Link':''};
+        img.status='done'; done++; renderQueue();
+
+        function afterUpload(){
           savedRows.push(row);
-          try { localStorage.setItem('lrg_rows', JSON.stringify(savedRows)); } catch(e) {}
+          try{localStorage.setItem('lrg_rows',JSON.stringify(savedRows));}catch(e){}
           renderSaved();
-          if (driveToken && sheetIds['reg']) {
-            appendRow('reg', REG_FIELDS.map(function(f) { return row[f] != null ? row[f] : ''; }),
-              function() {});
+          var surl=getScriptUrl();
+          if(surl){
+            scriptPost({action:'appendRegistry',row:row},function(){});
           }
-          setTimeout(function() { processNext(idx + 1); }, 300);
+          setTimeout(function(){processNext(idx+1);},400);
         }
-        if (driveToken) {
-          slog('  \u2191 Uploading to Drive\u2026', '');
-          uploadFile(img.b64, img.mime, filename, function(err, link) {
-            if (err) { slog('  \u26a0 Drive upload failed', 'l-warn'); }
-            else { row['Drive Link'] = link; slog('  \u2713 Saved: ' + filename, 'l-ok'); }
-            afterDrive();
-          });
+
+        var surl=getScriptUrl();
+        if(surl){
+          slog('  \u2191 Uploading to Drive\u2026','');
+          scriptPost({action:'uploadImage',b64:img.b64,mimeType:img.mime,filename:filename},
+            function(err,d){
+              if(err||!d||!d.ok){slog('  \u26a0 Drive upload failed','l-warn');}
+              else{row['Drive Link']=d.viewLink||'';slog('  \u2713 Saved: '+filename,'l-ok');}
+              afterUpload();
+            });
         } else {
-          afterDrive();
+          afterUpload();
         }
-      } catch(err) {
-        img.status = 'error';
-        slog('\u2717 Image ' + (idx + 1) + ': ' + err.message, 'l-err');
-        done++;
-        renderQueue();
-        setTimeout(function() { processNext(idx + 1); }, 300);
+      }catch(err){
+        img.status='error';
+        slog('\u2717 Image '+(idx+1)+': '+err.message,'l-err');
+        done++; renderQueue();
+        setTimeout(function(){processNext(idx+1);},400);
       }
     };
-    xhr.onerror = function() {
-      img.status = 'error';
-      slog('\u2717 Image ' + (idx + 1) + ': network error', 'l-err');
-      done++;
-      renderQueue();
-      setTimeout(function() { processNext(idx + 1); }, 300);
+    xhr.onerror=function(){
+      img.status='error';
+      slog('\u2717 Image '+(idx+1)+': network error','l-err');
+      done++; renderQueue();
+      setTimeout(function(){processNext(idx+1);},400);
     };
-    xhr.send(body);
+    xhr.send(JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,
+      messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:img.mime,data:img.b64}},
+        {type:'text',text:SCAN_PROMPT}
+      ]}]}));
   }
   processNext(0);
 }
 
 // ─── SAVED ROWS ────────────────────────────────────────────────────────────
-function renderSaved() {
-  var wrap = document.getElementById('savedWrap');
-  var list = document.getElementById('savedList');
-  var countEl = document.getElementById('savedCount');
-  var dl = document.getElementById('scanDl');
-  if (!savedRows.length) { wrap.classList.remove('on'); return; }
-  wrap.classList.add('on');
-  countEl.textContent = savedRows.length;
-  var html = '';
-  for (var i = 0; i < savedRows.length; i++) {
-    var r = savedRows[i];
-    var link = r['Drive Link'] ? ' <a href="' + r['Drive Link'] + '" target="_blank" style="color:var(--success);font-size:10px;text-decoration:none;">\u2197 Drive</a>' : '';
-    html += '<div class="saved-row"><div class="saved-info"><div class="saved-title">' +
-      r['Plate ID'] + ' \u2013 ' + r['Plate Name'] + link + '</div>' +
-      '<div class="saved-meta">' + (r['Series / Project'] || '\u2014') + ' \u00b7 ' +
-      (r['Date / Batch'] || '\u2014') + '</div></div>' +
-      '<button class="saved-del" onclick="deleteRow(' + i + ')">\u2715</button></div>';
+function renderSaved(){
+  var wrap=document.getElementById('savedWrap');
+  var list=document.getElementById('savedList');
+  var countEl=document.getElementById('savedCount');
+  var dl=document.getElementById('scanDl');
+  if(!savedRows.length){wrap.classList.remove('on');return;}
+  wrap.classList.add('on'); countEl.textContent=savedRows.length;
+  var html='';
+  for(var i=0;i<savedRows.length;i++){
+    var r=savedRows[i];
+    var link=r['Drive Link']?' <a href="'+r['Drive Link']+'" target="_blank" style="color:var(--success);font-size:10px;text-decoration:none;">\u2197 Drive</a>':'';
+    html+='<div class="saved-row"><div class="saved-info">'+
+      '<div class="saved-title">'+r['Plate ID']+' \u2013 '+r['Plate Name']+link+'</div>'+
+      '<div class="saved-meta">'+(r['Series / Project']||'\u2014')+' \u00b7 '+(r['Date / Batch']||'\u2014')+'</div>'+
+      '</div><button class="saved-del" onclick="deleteRow('+i+')">\u2715</button></div>';
   }
-  list.innerHTML = html;
-  var csv = toCSV(savedRows, REG_FIELDS);
-  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  dl.href = URL.createObjectURL(blob);
-  dl.style.display = 'flex';
+  list.innerHTML=html;
+  var csv=toCSV(savedRows,REG_FIELDS);
+  var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  dl.href=URL.createObjectURL(blob); dl.style.display='flex';
 }
 
-function deleteRow(i) { savedRows.splice(i, 1); try { localStorage.setItem('lrg_rows', JSON.stringify(savedRows)); } catch(e) {} renderSaved(); }
-function clearAll() { if (confirm('Delete all ' + savedRows.length + ' saved rows?')) { savedRows = []; try { localStorage.setItem('lrg_rows', '[]'); } catch(e) {} renderSaved(); } }
+function deleteRow(i){savedRows.splice(i,1);try{localStorage.setItem('lrg_rows',JSON.stringify(savedRows));}catch(e){}renderSaved();}
+function clearAll(){if(confirm('Delete all '+savedRows.length+' saved rows?')){savedRows=[];try{localStorage.setItem('lrg_rows','[]');}catch(e){}renderSaved();}}
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
-(function init() {
-  var savedKey = localStorage.getItem('lrg_api_key');
-  if (savedKey) { apiKeyEl.value = savedKey; apiStatusEl.textContent = '\u2713 saved'; apiStatusEl.className = 'status ok'; }
-  var savedCid = localStorage.getItem('lrg_cid');
-  if (savedCid) document.getElementById('clientId').value = savedCid;
+(function init(){
+  var k=localStorage.getItem('lrg_api_key');
+  if(k){apiKeyEl.value=k;apiStatusEl.textContent='\u2713 saved';apiStatusEl.className='status ok';}
+  var u=localStorage.getItem('lrg_script_url');
+  if(u){scriptUrlEl.value=u;}
+  updateScriptUI();
   renderSaved();
-  renderSheetLinks();
 })();
 </script>
 </body>
 </html>
+
