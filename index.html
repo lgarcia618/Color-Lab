@@ -797,17 +797,19 @@ function ensureAtTables(baseId) {
   atReq('GET', 'https://api.airtable.com/v0/meta/bases/' + baseId + '/tables', null, function(err, d) {
     if (err || !d || !d.tables) return;
     var tables = d.tables;
-    var hasLibrary = false;
+    var hasRegistry = false, hasLibrary = false;
     for (var i = 0; i < tables.length; i++) {
-      if (tables[i].name === 'Plate Registry') atTableIds['registry'] = tables[i].id;
-      if (tables[i].name === 'Color Library')  { hasLibrary = true; atTableIds['library'] = tables[i].id; }
+      if (tables[i].name === 'Plate Registry') { hasRegistry = true; atTableIds['registry'] = tables[i].id; }
+      if (tables[i].name === 'Color Library')  { hasLibrary  = true; atTableIds['library']  = tables[i].id; }
     }
     localStorage.setItem('lrg_at_tables', JSON.stringify(atTableIds));
-    if (!hasLibrary) {
+    if (!hasLibrary && atTableIds['registry']) {
       atReq('POST', 'https://api.airtable.com/v0/meta/bases/' + baseId + '/tables', {
         name: 'Color Library',
         fields: [
           { name: 'Sample Title',     type: 'singleLineText' },
+          { name: 'Plate',            type: 'multipleRecordLinks',
+            options: { linkedTableId: atTableIds['registry'] } },
           { name: 'Series / Project', type: 'singleLineText' },
           { name: 'Plate ID',         type: 'singleLineText' },
           { name: 'Plate Name',       type: 'singleLineText' },
@@ -844,6 +846,21 @@ function showAtLink(baseId) {
   linksEl.classList.add('on');
 }
 
+function getOrCreateRegistryRecord(baseId, plateId, plateName, series, cb) {
+  var filter = encodeURIComponent("{Plate ID}='" + plateId + "'");
+  atReq('GET', 'https://api.airtable.com/v0/' + baseId + '/Plate%20Registry?filterByFormula=' + filter,
+    null, function(err, d) {
+      if (!err && d && d.records && d.records.length > 0) { cb(null, d.records[0].id); return; }
+      var fields = { 'Plate ID': plateId, 'Plate Name': plateName || '',
+        'Series / Project': series || '', 'Status': 'Pending', 'Total Sections': 11 };
+      atReq('POST', 'https://api.airtable.com/v0/' + baseId + '/Plate%20Registry',
+        { records: [{ fields: fields }] }, function(err2, d2) {
+          if (err2 || !d2 || !d2.records || !d2.records[0]) { cb(err2 || 'create failed'); return; }
+          cb(null, d2.records[0].id);
+        });
+    });
+}
+
 function atAppendRegistry(row, cb) {
   var baseId = atBaseId || localStorage.getItem('lrg_at_base');
   if (!getAtToken() || !baseId) { if (cb) cb(null); return; }
@@ -860,31 +877,55 @@ function atAppendLibraryBatch(records, cb) {
   var baseId = atBaseId || localStorage.getItem('lrg_at_base');
   if (!getAtToken() || !baseId) { if (cb) cb(null); return; }
   var numFields = ['Section #','L*','a*','b*','\u0394E00','\u0394L*','\u0394a*','\u0394b*'];
-  var chunks = [];
-  for (var i = 0; i < records.length; i += 10) chunks.push(records.slice(i, i + 10));
-  var ci = 0;
-  function nextChunk() {
-    if (ci >= chunks.length) { if (cb) cb(null); return; }
-    var chunk = chunks[ci++];
-    var atRecs = chunk.map(function(rec) {
-      var fields = {};
-      var libKeys = ['Sample Title','Series / Project','Plate ID','Plate Name','Plate Type',
-        'Section','Section #','Position','L*','a*','b*','\u0394E00','\u0394L*','\u0394a*','\u0394b*','Judgement','Group Traits','Notes'];
-      for (var k = 0; k < libKeys.length; k++) {
-        var key = libKeys[k], val = rec[key];
-        if (val === '' || val == null) continue;
-        if (numFields.indexOf(key) > -1) { var n = parseFloat(val); if (!isNaN(n)) fields[key] = n; }
-        else fields[key] = String(val);
-      }
-      return { fields: fields };
-    });
-    atReq('POST', 'https://api.airtable.com/v0/' + baseId + '/Color%20Library',
-      { records: atRecs }, function(err) {
-        if (err) { if (cb) cb(err); return; }
-        setTimeout(nextChunk, 300);
+  var plateMap = {};
+  for (var i = 0; i < records.length; i++) {
+    var pid = records[i]['Plate ID'];
+    if (!plateMap[pid]) plateMap[pid] = [];
+    plateMap[pid].push(records[i]);
+  }
+  var plateIds = Object.keys(plateMap);
+  var registryMap = {};
+  var pi = 0;
+  function nextPlate() {
+    if (pi >= plateIds.length) { pushLibraryRecords(); return; }
+    var pid = plateIds[pi++];
+    var sample = plateMap[pid][0];
+    getOrCreateRegistryRecord(baseId, pid, sample['Plate Name'], sample['Series / Project'],
+      function(err, recId) {
+        if (!err && recId) registryMap[pid] = recId;
+        setTimeout(nextPlate, 250);
       });
   }
-  nextChunk();
+  function pushLibraryRecords() {
+    var chunks = [];
+    for (var i = 0; i < records.length; i += 10) chunks.push(records.slice(i, i + 10));
+    var ci = 0;
+    function nextChunk() {
+      if (ci >= chunks.length) { if (cb) cb(null); return; }
+      var chunk = chunks[ci++];
+      var atRecs = chunk.map(function(rec) {
+        var fields = {};
+        var libKeys = ['Sample Title','Series / Project','Plate ID','Plate Name','Plate Type',
+          'Section','Section #','Position','L*','a*','b*','\u0394E00','\u0394L*','\u0394a*','\u0394b*','Judgement','Group Traits','Notes'];
+        for (var k = 0; k < libKeys.length; k++) {
+          var key = libKeys[k], val = rec[key];
+          if (val === '' || val == null) continue;
+          if (numFields.indexOf(key) > -1) { var n = parseFloat(val); if (!isNaN(n)) fields[key] = n; }
+          else fields[key] = String(val);
+        }
+        var regId = registryMap[rec['Plate ID']];
+        if (regId) fields['Plate'] = [regId];
+        return { fields: fields };
+      });
+      atReq('POST', 'https://api.airtable.com/v0/' + baseId + '/Color%20Library',
+        { records: atRecs }, function(err) {
+          if (err) { if (cb) cb(err); return; }
+          setTimeout(nextChunk, 300);
+        });
+    }
+    nextChunk();
+  }
+  nextPlate();
 }
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
