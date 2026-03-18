@@ -142,7 +142,7 @@ input[type=file]{display:none;}
     <div class="dz-label">Drop NX2 .xlsx file here</div>
     <div class="dz-sub">or tap to browse</div>
     <div class="dz-file" id="nx2Name"></div>
-    <input type="file" id="nx2File" accept=".xlsx,.xls">
+    <input type="file" id="nx2File" accept=".xlsx,.xls,.csv">
   </div>
   <button class="btn btn-y" id="convertBtn" disabled onclick="doConvert()">Convert to CSV</button>
   <div class="log" id="convertLog"></div>
@@ -373,7 +373,7 @@ dropZone.addEventListener('drop', function(e) {
 });
 
 function setNX2(f) {
-  if (!f || !f.name.match(/\.xlsx?$/i)) return;
+  if (!f || !f.name.match(/\.(xlsx?|csv)$/i)) return;
   nx2Data = f;
   document.getElementById('nx2Name').textContent = f.name;
   dropZone.classList.add('has');
@@ -461,32 +461,91 @@ function toCSV(records, fields) {
   return lines.join('\r\n');
 }
 
+function seriesFromFilename(filename) {
+  var s = filename.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+  return s.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+}
+
+function parseCSV(text, filename) {
+  var series = seriesFromFilename(filename);
+  var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+  if (!lines.length) return [];
+  var headers = lines[0].split(',').map(function(h) { return h.replace(/^"|"$/g, '').replace(/^\uFEFF/, '').trim(); });
+  var out = [];
+  for (var i = 1; i < lines.length; i++) {
+    var cols = lines[i].split(',').map(function(c) { return c.replace(/^"|"$/g, '').trim(); });
+    if (cols.length < 2) continue;
+    var row = {};
+    for (var j = 0; j < headers.length; j++) row[headers[j]] = cols[j] || '';
+    var gt = (row['Group Traits'] || '').toUpperCase();
+    if (gt !== 'SCI') continue;
+    var name = row['Data Name'] || '';
+    var nl = name.toLowerCase();
+    // Determine row type for notes/position field
+    var rowType = '';
+    if (nl.indexOf('reference') > -1 || nl.indexOf('average') > -1) rowType = 'Reference Average';
+    else if (nl.indexOf('dome') > -1) rowType = 'Dome';
+    // Extract base plate ID by stripping suffixes
+    var baseName = name.replace(/_?reference_?sample_?average/gi, '')
+                       .replace(/_?dome/gi, '')
+                       .replace(/_?average/gi, '')
+                       .replace(/^_+|_+$/g, '').trim() || name;
+    var pid = baseName.replace(/_/g, '-').toUpperCase();
+    var pname = baseName.replace(/_/g, ' ');
+    var fullName = name.replace(/_/g, ' ');
+    function sv2(v) { return (!v || v === '---') ? '' : v; }
+    function col(key) {
+      for (var k in row) { if (k.indexOf(key) === 0) return sv2(row[k]); }
+      return sv2(row[key] || '');
+    }
+    out.push({
+      'Sample Title': pid + ' \u2013 ' + (rowType ? rowType + ' \u2013 ' : '') + series,
+      'Series / Project': series,
+      'Plate ID': pid, 'Plate Name': pname, 'Plate Type': 'Solid',
+      'Section': 'S01', 'Section #': 1, 'Position': rowType || 'Single',
+      'L*': col('L*'), 'a*': col('a*'), 'b*': col('b*'),
+      '\u0394E00': col('\u0394E00'), '\u0394L*': col('\u0394L*'),
+      '\u0394a*': col('\u0394a*'), '\u0394b*': col('\u0394b*'),
+      'Judgement': sv2(row['Total Judgement'] || row['Visual Judgement']),
+      'Group Traits': sv2(row['Group Traits']),
+      'Notes': rowType ? rowType + ' reading: ' + fullName : ''
+    });
+  }
+  return out;
+}
+
 function doConvert() {
   if(!nx2Data) return;
   var log=document.getElementById('convertLog');
   log.innerHTML=''; log.classList.add('on');
   document.getElementById('convertDl').style.display='none';
-  clog('Reading '+nx2Data.name+'…','l-head');
+  clog('Reading '+nx2Data.name+'\u2026','l-head');
+  var isCSV = nx2Data.name.match(/\.csv$/i);
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      var wb=XLSX.read(e.target.result,{type:'array'});
-      clog('Sheet: '+wb.SheetNames[0],'l-ok');
-      var recs=parseNX2(wb);
-      clog(recs.length+' section records parsed','l-ok');
-      var plates={};
-      for(var i=0;i<recs.length;i++){ var p=recs[i]['Plate ID']; plates[p]=(plates[p]||0)+1; }
-      var pkeys=Object.keys(plates);
-      for(var j=0;j<pkeys.length;j++){
-        var c=plates[pkeys[j]];
-        clog('  '+pkeys[j]+' \u2192 '+c+' section'+(c>1?'s':'')+(c!==11?' \u26a0':''),c!==11?'l-warn':'');
+      var recs;
+      if (isCSV) {
+        recs = parseCSV(e.target.result, nx2Data.name);
+        clog('\u2713 CSV parsed \u2014 ' + recs.length + ' SCI records', 'l-ok');
+      } else {
+        var wb=XLSX.read(e.target.result,{type:'array'});
+        clog('Sheet: '+wb.SheetNames[0],'l-ok');
+        recs=parseNX2(wb);
+        clog(recs.length+' section records parsed','l-ok');
+        var plates={};
+        for(var i=0;i<recs.length;i++){ var p=recs[i]['Plate ID']; plates[p]=(plates[p]||0)+1; }
+        var pkeys=Object.keys(plates);
+        for(var j=0;j<pkeys.length;j++){
+          var c=plates[pkeys[j]];
+          clog('  '+pkeys[j]+' \u2192 '+c+' section'+(c>1?'s':'')+(c!==11?' \u26a0':''),c!==11?'l-warn':'');
+        }
       }
       var csv=toCSV(recs,LIB_FIELDS);
       var blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
       var dl=document.getElementById('convertDl');
       dl.href=URL.createObjectURL(blob); dl.style.display='flex';
       clog('\u2713 Ready \u2014 click Download','l-ok');
-      // Send to sheet if script connected
       var surl=getScriptUrl();
       if(surl){
         clog('Sending to Color Library sheet\u2026','');
@@ -495,7 +554,6 @@ function doConvert() {
           else clog('\u2713 '+recs.length+' rows added to Color Library','l-ok');
         });
       }
-      // Push to Airtable
       var atTok=getAtToken();
       if(atTok){
         clog('Sending to Airtable Color Library\u2026','');
@@ -506,7 +564,8 @@ function doConvert() {
       }
     }catch(err){clog('\u2717 '+err.message,'l-err');}
   };
-  reader.readAsArrayBuffer(nx2Data);
+  if (isCSV) reader.readAsText(nx2Data);
+  else reader.readAsArrayBuffer(nx2Data);
 }
 
 // ─── IMAGE QUEUE ───────────────────────────────────────────────────────────
