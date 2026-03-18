@@ -695,7 +695,7 @@ function renderSaved(){
 function deleteRow(i){savedRows.splice(i,1);try{localStorage.setItem('lrg_rows',JSON.stringify(savedRows));}catch(e){}renderSaved();}
 function clearAll(){if(confirm('Delete all '+savedRows.length+' saved rows?')){savedRows=[];try{localStorage.setItem('lrg_rows','[]');}catch(e){}renderSaved();}}
 
-// ─── AIRTABLE (via Apps Script proxy) ─────────────────────────────────────
+// ─── AIRTABLE (direct browser calls) ──────────────────────────────────────
 var atTokenEl = document.getElementById('atToken');
 var atStatusEl = document.getElementById('atStatus');
 var atBaseId = null;
@@ -708,33 +708,38 @@ atTokenEl.addEventListener('input', function() {
   if (t) localStorage.setItem('lrg_at_token', t);
 });
 
-// All Airtable requests go through Apps Script to avoid CORS
 function atReq(method, url, body, cb) {
   var token = getAtToken();
   if (!token) { cb('no token'); return; }
-  scriptPost({ action: 'airtableReq', method: method, url: url, token: token, body: body || null },
-    function(err, d) {
-      if (err) { cb(err); return; }
-      if (!d.ok) { cb(d.error || ('HTTP ' + d.status)); return; }
-      cb(null, d.data);
-    });
+  var xhr = new XMLHttpRequest();
+  xhr.open(method, url);
+  xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onload = function() {
+    try {
+      var d = JSON.parse(xhr.responseText);
+      if (xhr.status >= 200 && xhr.status < 300) cb(null, d);
+      else cb(d.error ? d.error.message : 'HTTP ' + xhr.status, d);
+    } catch(e) { cb('parse error'); }
+  };
+  xhr.onerror = function() { cb('network error'); };
+  xhr.send(body ? JSON.stringify(body) : null);
 }
 
 function testAirtable() {
   var token = getAtToken();
   if (!token) { alert('Paste your Airtable Personal Access Token first'); return; }
-  if (!getScriptUrl()) { alert('Connect your Apps Script first — Airtable routes through it'); return; }
   atStatusEl.textContent = 'connecting\u2026';
   atStatusEl.className = 'status';
+  // First verify token works by listing bases
   atReq('GET', 'https://api.airtable.com/v0/meta/bases', null, function(err, d) {
     if (err) {
-      atStatusEl.textContent = '\u2717 ' + err;
+      atStatusEl.textContent = '\u2717 ' + (err.length > 30 ? 'invalid token' : err);
       atStatusEl.className = 'status err';
       return;
     }
-    // Look for existing Color Lab base
-    var existing = null;
     var bases = d.bases || [];
+    var existing = null;
     for (var i = 0; i < bases.length; i++) {
       if (bases[i].name === 'Color Lab') { existing = bases[i]; break; }
     }
@@ -755,7 +760,7 @@ function createAtBase() {
   atStatusEl.textContent = 'creating base\u2026';
   // Get workspace ID first
   atReq('GET', 'https://api.airtable.com/v0/meta/workspaces', null, function(err, wd) {
-    var wsId = (!err && wd && wd.workspaces && wd.workspaces[0]) ? wd.workspaces[0].id : null;
+    var wsId = (!err && wd && wd.workspaces && wd.workspaces.length) ? wd.workspaces[0].id : null;
     var body = {
       name: 'Color Lab',
       tables: [{
@@ -885,7 +890,6 @@ function atAppendLibraryBatch(records, cb) {
   }
   nextChunk();
 }
-
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
 (function init(){
