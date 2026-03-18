@@ -139,12 +139,12 @@ input[type=file]{display:none;}
 <!-- CONVERT PANEL -->
 <div class="panel active" id="panel-convert">
   <div class="dropzone" id="dropZone" onclick="document.getElementById('nx2File').click()">
-    <div class="dz-label">Drop NX2 .xlsx file here</div>
+    <div class="dz-label" id="dzLabel">Drop NX2 .xlsx or .csv file here</div>
     <div class="dz-sub">or tap to browse</div>
     <div class="dz-file" id="nx2Name"></div>
     <input type="file" id="nx2File" accept=".xlsx,.xls,.csv">
   </div>
-  <button class="btn btn-y" id="convertBtn" disabled onclick="doConvert()">Convert to CSV</button>
+  <button class="btn btn-y" id="convertBtn" disabled onclick="doConvert()" id="convertBtn">Process & Sync</button>
   <div class="log" id="convertLog"></div>
   <a class="btn btn-g" id="convertDl" style="display:none;text-decoration:none;" download="Airtable_Import.csv">Download CSV</a>
 </div>
@@ -478,7 +478,9 @@ function parseCSV(text, filename) {
     var row = {};
     for (var j = 0; j < headers.length; j++) row[headers[j]] = cols[j] || '';
     var gt = (row['Group Traits'] || '').toUpperCase();
-    if (gt !== 'SCI') continue;
+    // If Group Traits is blank or --- treat as valid; otherwise SCI only
+    var hasMode = gt && gt !== '---';
+    if (hasMode && gt !== 'SCI') continue;
     var name = row['Data Name'] || '';
     var nl = name.toLowerCase();
     // Determine row type for notes/position field
