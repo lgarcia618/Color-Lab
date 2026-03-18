@@ -758,42 +758,37 @@ function testAirtable() {
 
 function createAtBase() {
   atStatusEl.textContent = 'creating base\u2026';
-  // Get workspace ID first
-  atReq('GET', 'https://api.airtable.com/v0/meta/workspaces', null, function(err, wd) {
-    var wsId = (!err && wd && wd.workspaces && wd.workspaces.length) ? wd.workspaces[0].id : null;
-    var body = {
-      name: 'Color Lab',
-      tables: [{
-        name: 'Plate Registry',
-        fields: [
-          { name: 'Plate ID',         type: 'singleLineText' },
-          { name: 'Plate Name',       type: 'singleLineText' },
-          { name: 'Series / Project', type: 'singleLineText' },
-          { name: 'Plate Type',       type: 'singleLineText' },
-          { name: 'Date / Batch',     type: 'singleLineText' },
-          { name: 'Substrate / Base', type: 'singleLineText' },
-          { name: 'Total Sections',   type: 'number', options: { precision: 0 } },
-          { name: 'Status',           type: 'singleLineText' },
-          { name: 'Notes',            type: 'multilineText' },
-          { name: 'Image File',       type: 'singleLineText' },
-          { name: 'Drive Link',       type: 'url' }
-        ]
-      }]
-    };
-    if (wsId) body.workspaceId = wsId;
-    atReq('POST', 'https://api.airtable.com/v0/meta/bases', body, function(err2, d) {
-      if (err2 || !d || !d.id) {
-        atStatusEl.textContent = '\u2717 base creation failed';
-        atStatusEl.className = 'status err';
-        return;
-      }
-      atBaseId = d.id;
-      localStorage.setItem('lrg_at_base', atBaseId);
-      atStatusEl.textContent = '\u2713 base created';
-      atStatusEl.className = 'status ok';
-      showAtLink(atBaseId);
-      ensureAtTables(atBaseId);
-    });
+  var body = {
+    name: 'Color Lab',
+    tables: [{
+      name: 'Plate Registry',
+      fields: [
+        { name: 'Plate ID',         type: 'singleLineText' },
+        { name: 'Plate Name',       type: 'singleLineText' },
+        { name: 'Series / Project', type: 'singleLineText' },
+        { name: 'Plate Type',       type: 'singleLineText' },
+        { name: 'Date / Batch',     type: 'singleLineText' },
+        { name: 'Substrate / Base', type: 'singleLineText' },
+        { name: 'Total Sections',   type: 'number', options: { precision: 0 } },
+        { name: 'Status',           type: 'singleLineText' },
+        { name: 'Notes',            type: 'multilineText' },
+        { name: 'Image File',       type: 'singleLineText' },
+        { name: 'Drive Link',       type: 'url' }
+      ]
+    }]
+  };
+  atReq('POST', 'https://api.airtable.com/v0/meta/bases', body, function(err, d) {
+    if (err || !d || !d.id) {
+      atStatusEl.textContent = '\u2717 base creation failed: ' + (err || 'unknown');
+      atStatusEl.className = 'status err';
+      return;
+    }
+    atBaseId = d.id;
+    localStorage.setItem('lrg_at_base', atBaseId);
+    atStatusEl.textContent = '\u2713 base created';
+    atStatusEl.className = 'status ok';
+    showAtLink(atBaseId);
+    ensureAtTables(atBaseId);
   });
 }
 
