@@ -134,6 +134,7 @@ input[type=file]{display:none;}
 <div class="tabs">
   <button class="tab active" onclick="switchTab('convert')">NX2 Convert</button>
   <button class="tab" onclick="switchTab('scan')">Scan Tag</button>
+  <button class="tab" onclick="switchTab('master')">Master</button>
 </div>
 
 <!-- CONVERT PANEL -->
@@ -226,6 +227,47 @@ input[type=file]{display:none;}
   </div>
 
 </div>
+
+<!-- MASTER PANEL -->
+<div class="panel" id="panel-master">
+
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:16px;line-height:1.7;">
+    Pulls live from Airtable, merges Plate Registry + Color Library by Plate ID,
+    and pushes to a <strong style="color:var(--text);">Color Lab Master</strong> table.
+    Incomplete plates are flagged automatically.
+  </div>
+
+  <button class="btn btn-y" onclick="doMasterExport()">
+    <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M10 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Build Master Table
+  </button>
+
+  <div class="log" id="masterLog"></div>
+
+  <div id="masterResults" style="display:none;margin-top:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);">
+        <span id="masterTotal">0</span> plates ·
+        <span id="masterComplete" style="color:var(--success);">0 complete</span> ·
+        <span id="masterIncomplete" style="color:var(--warn);">0 incomplete</span>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <a class="sbtn" id="masterCsvDl" style="display:none;text-decoration:none;" download="Color_Lab_Master.csv">CSV</a>
+        <a class="sbtn" id="masterXlsxDl" style="display:none;text-decoration:none;" download="Color_Lab_Master.xlsx">XLSX</a>
+      </div>
+    </div>
+    <div id="masterPreview" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:auto;max-height:320px;font-family:'DM Mono',monospace;font-size:10px;"></div>
+  </div>
+
+  <div class="steps" style="margin-top:24px;">
+    <div class="step"><div class="step-n">1</div><div><strong>Connect Airtable</strong> in the Scan Tag tab first</div></div>
+    <div class="step"><div class="step-n">2</div><div><strong>Click Build Master Table</strong> — app fetches all plates and LAB sections live</div></div>
+    <div class="step"><div class="step-n">3</div><div><strong>Merged rows push to Airtable</strong> as a new Color Lab Master table — one row per section</div></div>
+    <div class="step"><div class="step-n">4</div><div><strong>Download CSV or XLSX</strong> for offline use or manual import</div></div>
+  </div>
+
+</div>
+
 </div>
 
 <script>
@@ -268,7 +310,7 @@ function testKey() {
 function switchTab(name) {
   var tabs = document.querySelectorAll('.tab');
   var panels = document.querySelectorAll('.panel');
-  var names = ['convert', 'scan'];
+  var names = ['convert', 'scan', 'master'];
   for (var i = 0; i < tabs.length; i++) {
     tabs[i].classList.toggle('active', names[i] === name);
     panels[i].classList.toggle('active', names[i] === name);
@@ -987,6 +1029,261 @@ function atAppendLibraryBatch(records, cb) {
     nextChunk();
   }
   nextPlate();
+}
+
+// ─── MASTER EXPORT ────────────────────────────────────────────────────────
+var MASTER_FIELDS = [
+  'Plate ID','Plate Name','Series / Project','Plate Type','Date / Batch',
+  'Substrate / Base','Status','Image File','Drive Link',
+  'Section','Section #','Position',
+  'L*','a*','b*','\u0394E00','\u0394L*','\u0394a*','\u0394b*',
+  'Judgement','Group Traits','Notes','Completeness'
+];
+
+function mlog(msg, cls) {
+  var log = document.getElementById('masterLog');
+  var d = document.createElement('div');
+  if (cls) d.className = cls;
+  d.textContent = msg;
+  log.appendChild(d); log.scrollTop = log.scrollHeight; log.classList.add('on');
+}
+
+function atFetchAll(url, allRecords, cb) {
+  atReq('GET', url, null, function(err, d) {
+    if (err || !d) { cb(err || 'fetch failed'); return; }
+    var recs = d.records || [];
+    for (var i = 0; i < recs.length; i++) allRecords.push(recs[i]);
+    if (d.offset) {
+      var sep = url.indexOf('?') > -1 ? '&' : '?';
+      atFetchAll(url + sep + 'offset=' + d.offset, allRecords, cb);
+    } else {
+      cb(null, allRecords);
+    }
+  });
+}
+
+function doMasterExport() {
+  var baseId = atBaseId || localStorage.getItem('lrg_at_base');
+  if (!getAtToken() || !baseId) {
+    alert('Connect Airtable in the Scan Tag tab first');
+    return;
+  }
+  var log = document.getElementById('masterLog');
+  log.innerHTML = ''; log.classList.add('on');
+  document.getElementById('masterResults').style.display = 'none';
+  mlog('Fetching Plate Registry\u2026', 'l-head');
+
+  // Step 1: fetch all Plate Registry records
+  atFetchAll('https://api.airtable.com/v0/' + baseId + '/Plate%20Registry?pageSize=100', [], function(err, regRecs) {
+    if (err) { mlog('\u2717 Registry fetch failed: ' + err, 'l-err'); return; }
+    mlog('\u2713 ' + regRecs.length + ' plates found', 'l-ok');
+    mlog('Fetching Color Library\u2026', '');
+
+    // Step 2: fetch all Color Library records
+    atFetchAll('https://api.airtable.com/v0/' + baseId + '/Color%20Library?pageSize=100', [], function(err2, libRecs) {
+      if (err2) { mlog('\u2717 Library fetch failed: ' + err2, 'l-err'); return; }
+      mlog('\u2713 ' + libRecs.length + ' LAB sections found', 'l-ok');
+      mlog('Merging by Plate ID\u2026', '');
+
+      // Build registry map
+      var regMap = {};
+      for (var i = 0; i < regRecs.length; i++) {
+        var f = regRecs[i].fields;
+        var pid = f['Plate ID'] || '';
+        if (pid) regMap[pid] = f;
+      }
+
+      // Build lib map grouped by Plate ID
+      var libMap = {};
+      for (var j = 0; j < libRecs.length; j++) {
+        var lf = libRecs[j].fields;
+        var lpid = lf['Plate ID'] || '';
+        if (!libMap[lpid]) libMap[lpid] = [];
+        libMap[lpid].push(lf);
+      }
+
+      // Merge — one row per section
+      var masterRows = [];
+      var allPids = {};
+      for (var pid in regMap) allPids[pid] = true;
+      for (var pid in libMap) allPids[pid] = true;
+      var pids = Object.keys(allPids);
+      var completeCount = 0, incompleteCount = 0;
+
+      for (var k = 0; k < pids.length; k++) {
+        var pid = pids[k];
+        var reg = regMap[pid] || {};
+        var sections = libMap[pid] || [];
+        var hasScan = !!regMap[pid];
+        var hasLab  = sections.length > 0;
+        var complete = hasScan && hasLab;
+        if (complete) completeCount++; else incompleteCount++;
+        var completeness = complete ? 'Complete' : (!hasScan ? '\u26a0 No Scan Tag' : '\u26a0 No LAB Data');
+
+        if (sections.length > 0) {
+          for (var s = 0; s < sections.length; s++) {
+            var sec = sections[s];
+            var row = {
+              'Plate ID':         pid,
+              'Plate Name':       reg['Plate Name']       || sec['Plate Name']       || '',
+              'Series / Project': reg['Series / Project'] || sec['Series / Project'] || '',
+              'Plate Type':       reg['Plate Type']       || sec['Plate Type']       || '',
+              'Date / Batch':     reg['Date / Batch']     || '',
+              'Substrate / Base': reg['Substrate / Base'] || '',
+              'Status':           reg['Status']           || '',
+              'Image File':       reg['Image File']       || '',
+              'Drive Link':       reg['Drive Link']       || '',
+              'Section':          sec['Section']          || '',
+              'Section #':        sec['Section #']        || '',
+              'Position':         sec['Position']         || '',
+              'L*':               sec['L*']               || '',
+              'a*':               sec['a*']               || '',
+              'b*':               sec['b*']               || '',
+              '\u0394E00':        sec['\u0394E00']        || '',
+              '\u0394L*':         sec['\u0394L*']         || '',
+              '\u0394a*':         sec['\u0394a*']         || '',
+              '\u0394b*':         sec['\u0394b*']         || '',
+              'Judgement':        sec['Judgement']        || '',
+              'Group Traits':     sec['Group Traits']     || '',
+              'Notes':            sec['Notes']            || '',
+              'Completeness':     completeness
+            };
+            masterRows.push(row);
+          }
+        } else {
+          // Plate has scan but no LAB — add stub row
+          masterRows.push({
+            'Plate ID': pid, 'Plate Name': reg['Plate Name'] || '',
+            'Series / Project': reg['Series / Project'] || '',
+            'Plate Type': reg['Plate Type'] || '', 'Date / Batch': reg['Date / Batch'] || '',
+            'Substrate / Base': reg['Substrate / Base'] || '', 'Status': reg['Status'] || '',
+            'Image File': reg['Image File'] || '', 'Drive Link': reg['Drive Link'] || '',
+            'Section': '', 'Section #': '', 'Position': '', 'L*': '', 'a*': '', 'b*': '',
+            '\u0394E00': '', '\u0394L*': '', '\u0394a*': '', '\u0394b*': '',
+            'Judgement': '', 'Group Traits': '', 'Notes': '', 'Completeness': completeness
+          });
+        }
+      }
+
+      mlog('\u2713 ' + masterRows.length + ' merged rows (' + completeCount + ' complete, ' + incompleteCount + ' incomplete)', 'l-ok');
+
+      // Update stats
+      document.getElementById('masterTotal').textContent = pids.length;
+      document.getElementById('masterComplete').textContent = completeCount + ' complete';
+      document.getElementById('masterIncomplete').textContent = incompleteCount + ' incomplete';
+      document.getElementById('masterResults').style.display = 'block';
+
+      // Render preview
+      renderMasterPreview(masterRows);
+
+      // Generate CSV download
+      var csv = toCSV(masterRows, MASTER_FIELDS);
+      var csvBlob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var csvDl = document.getElementById('masterCsvDl');
+      csvDl.href = URL.createObjectURL(csvBlob);
+      csvDl.style.display = 'inline-block';
+
+      // Generate XLSX download
+      generateMasterXLSX(masterRows);
+
+      // Push to Airtable Master table
+      mlog('Pushing to Airtable Color Lab Master\u2026', '');
+      ensureMasterTable(baseId, function(err3) {
+        if (err3) { mlog('\u26a0 Master table setup failed: ' + err3, 'l-warn'); return; }
+        pushMasterRows(baseId, masterRows, function(err4) {
+          if (err4) mlog('\u26a0 Airtable push failed: ' + err4, 'l-warn');
+          else mlog('\u2713 ' + masterRows.length + ' rows pushed to Color Lab Master', 'l-ok');
+        });
+      });
+    });
+  });
+}
+
+function renderMasterPreview(rows) {
+  var el = document.getElementById('masterPreview');
+  if (!rows.length) { el.innerHTML = '<div style="padding:12px;color:var(--muted)">No data</div>'; return; }
+  var cols = ['Plate ID','Plate Name','Series / Project','Section','L*','a*','b*','Judgement','Completeness'];
+  var html = '<table style="border-collapse:collapse;min-width:100%;">';
+  html += '<tr>' + cols.map(function(c) {
+    return '<th style="padding:6px 10px;border-bottom:1px solid var(--border);color:var(--accent);text-align:left;white-space:nowrap;">' + c + '</th>';
+  }).join('') + '</tr>';
+  var preview = rows.slice(0, 20);
+  for (var i = 0; i < preview.length; i++) {
+    var r = preview[i];
+    var incomplete = r['Completeness'] && r['Completeness'].indexOf('\u26a0') > -1;
+    html += '<tr style="background:' + (incomplete ? 'rgba(251,191,36,.06)' : 'transparent') + '">' +
+      cols.map(function(c) {
+        return '<td style="padding:5px 10px;border-bottom:1px solid var(--border);color:' +
+          (c === 'Completeness' && incomplete ? 'var(--warn)' : 'var(--text)') +
+          ';white-space:nowrap;">' + (r[c] != null ? r[c] : '') + '</td>';
+      }).join('') + '</tr>';
+  }
+  if (rows.length > 20) html += '<tr><td colspan="' + cols.length + '" style="padding:6px 10px;color:var(--muted);">\u2026 and ' + (rows.length - 20) + ' more rows</td></tr>';
+  html += '</table>';
+  el.innerHTML = html;
+}
+
+function generateMasterXLSX(rows) {
+  if (typeof XLSX === 'undefined') return;
+  var wsData = [MASTER_FIELDS];
+  for (var i = 0; i < rows.length; i++) {
+    wsData.push(MASTER_FIELDS.map(function(f) { return rows[i][f] != null ? rows[i][f] : ''; }));
+  }
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(wsData);
+  XLSX.utils.book_append_sheet(wb, ws, 'Color Lab Master');
+  var wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  var blob = new Blob([wbout], { type: 'application/octet-stream' });
+  var dl = document.getElementById('masterXlsxDl');
+  dl.href = URL.createObjectURL(blob);
+  dl.style.display = 'inline-block';
+}
+
+function ensureMasterTable(baseId, cb) {
+  atReq('GET', 'https://api.airtable.com/v0/meta/bases/' + baseId + '/tables', null, function(err, d) {
+    if (err || !d || !d.tables) { cb(err || 'fetch failed'); return; }
+    for (var i = 0; i < d.tables.length; i++) {
+      if (d.tables[i].name === 'Color Lab Master') { cb(null); return; }
+    }
+    // Create it
+    var fields = MASTER_FIELDS.map(function(f) {
+      var numericFields = ['Section #','L*','a*','b*','\u0394E00','\u0394L*','\u0394a*','\u0394b*'];
+      if (numericFields.indexOf(f) > -1) return { name: f, type: 'number', options: { precision: 4 } };
+      if (f === 'Drive Link') return { name: f, type: 'url' };
+      if (f === 'Notes') return { name: f, type: 'multilineText' };
+      return { name: f, type: 'singleLineText' };
+    });
+    atReq('POST', 'https://api.airtable.com/v0/meta/bases/' + baseId + '/tables',
+      { name: 'Color Lab Master', fields: fields }, function(err2) { cb(err2); });
+  });
+}
+
+function pushMasterRows(baseId, rows, cb) {
+  var numFields = ['Section #','L*','a*','b*','\u0394E00','\u0394L*','\u0394a*','\u0394b*'];
+  var chunks = [];
+  for (var i = 0; i < rows.length; i += 10) chunks.push(rows.slice(i, i + 10));
+  var ci = 0;
+  function nextChunk() {
+    if (ci >= chunks.length) { cb(null); return; }
+    var chunk = chunks[ci++];
+    var atRecs = chunk.map(function(row) {
+      var fields = {};
+      for (var f = 0; f < MASTER_FIELDS.length; f++) {
+        var key = MASTER_FIELDS[f];
+        var val = row[key];
+        if (val === '' || val == null) continue;
+        if (numFields.indexOf(key) > -1) { var n = parseFloat(val); if (!isNaN(n)) fields[key] = n; }
+        else fields[key] = String(val);
+      }
+      return { fields: fields };
+    });
+    atReq('POST', 'https://api.airtable.com/v0/' + baseId + '/Color%20Lab%20Master',
+      { records: atRecs }, function(err) {
+        if (err) { cb(err); return; }
+        setTimeout(nextChunk, 300);
+      });
+  }
+  nextChunk();
 }
 
 // ─── INIT ──────────────────────────────────────────────────────────────────
