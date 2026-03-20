@@ -1085,90 +1085,131 @@ function doMasterExport() {
       mlog('\u2713 ' + libRecs.length + ' LAB sections found', 'l-ok');
       mlog('Merging by Plate ID\u2026', '');
 
+      // ── Fuzzy matching helpers ───────────────────────────────────────────
+      function normalizeId(raw) {
+        if (!raw) return '';
+        var s = String(raw).toUpperCase();
+        s = s.replace(/([A-Z])O(\d)/g, '$10$2').replace(/(\d)O([A-Z\d])/g, '$10$2');
+        var m = s.match(/([A-Z]{1,3})[#\-_\s]*(\d{2,5})(?:[#\-_\s]*(\d+))?/);
+        if (m) return m[1] + m[2] + (m[3] || '');
+        return s.replace(/[^A-Z0-9]/g, '');
+      }
+      function fuzzyMatch(a, b) {
+        if (a === b) return 'exact';
+        var nA = normalizeId(a), nB = normalizeId(b);
+        if (nA === nB) return 'fuzzy';
+        if (nA.length >= 4 && nB.indexOf(nA) > -1) return 'fuzzy';
+        if (nB.length >= 4 && nA.indexOf(nB) > -1) return 'fuzzy';
+        return null;
+      }
+
       // Build registry map
-      var regMap = {};
+      var regMap = {}, regNormMap = {};
       for (var i = 0; i < regRecs.length; i++) {
         var f = regRecs[i].fields;
         var pid = f['Plate ID'] || '';
-        if (pid) regMap[pid] = f;
+        if (pid) { regMap[pid] = f; regNormMap[normalizeId(pid)] = pid; }
       }
 
-      // Build lib map grouped by Plate ID
-      var libMap = {};
+      // Build lib map
+      var libMap = {}, libNormMap = {};
       for (var j = 0; j < libRecs.length; j++) {
         var lf = libRecs[j].fields;
         var lpid = lf['Plate ID'] || '';
-        if (!libMap[lpid]) libMap[lpid] = [];
-        libMap[lpid].push(lf);
+        if (lpid) {
+          if (!libMap[lpid]) libMap[lpid] = [];
+          libMap[lpid].push(lf);
+          libNormMap[normalizeId(lpid)] = lpid;
+        }
       }
 
-      // Merge — one row per section
-      var masterRows = [];
-      var allPids = {};
-      for (var pid in regMap) allPids[pid] = true;
-      for (var pid in libMap) allPids[pid] = true;
-      var pids = Object.keys(allPids);
-      var completeCount = 0, incompleteCount = 0;
+      function findRegMatch(libPid) {
+        if (regMap[libPid]) return { pid: libPid, type: 'exact' };
+        var nL = normalizeId(libPid);
+        if (regNormMap[nL]) return { pid: regNormMap[nL], type: 'fuzzy' };
+        var rks = Object.keys(regMap);
+        for (var r = 0; r < rks.length; r++) { var fm = fuzzyMatch(libPid, rks[r]); if (fm) return { pid: rks[r], type: fm }; }
+        return null;
+      }
+      function findLibMatch(regPid) {
+        if (libMap[regPid]) return { pid: regPid, type: 'exact' };
+        var nR = normalizeId(regPid);
+        if (libNormMap[nR]) return { pid: libNormMap[nR], type: 'fuzzy' };
+        var lks = Object.keys(libMap);
+        for (var l = 0; l < lks.length; l++) { var fm = fuzzyMatch(regPid, lks[l]); if (fm) return { pid: lks[l], type: fm }; }
+        return null;
+      }
 
-      for (var k = 0; k < pids.length; k++) {
-        var pid = pids[k];
-        var reg = regMap[pid] || {};
-        var sections = libMap[pid] || [];
-        var hasScan = !!regMap[pid];
-        var hasLab  = sections.length > 0;
-        var complete = hasScan && hasLab;
-        if (complete) completeCount++; else incompleteCount++;
-        var completeness = complete ? 'Complete' : (!hasScan ? '\u26a0 No Scan Tag' : '\u26a0 No LAB Data');
+      var masterRows = [], processed = {};
+      var completeCount = 0, incompleteCount = 0, fuzzyCount = 0;
 
-        if (sections.length > 0) {
-          for (var s = 0; s < sections.length; s++) {
-            var sec = sections[s];
-            var row = {
-              'Plate ID':         pid,
-              'Plate Name':       reg['Plate Name']       || sec['Plate Name']       || '',
-              'Series / Project': reg['Series / Project'] || sec['Series / Project'] || '',
-              'Plate Type':       reg['Plate Type']       || sec['Plate Type']       || '',
-              'Date / Batch':     reg['Date / Batch']     || '',
-              'Substrate / Base': reg['Substrate / Base'] || '',
-              'Status':           reg['Status']           || '',
-              'Image File':       reg['Image File']       || '',
-              'Drive Link':       reg['Drive Link']       || '',
-              'Section':          sec['Section']          || '',
-              'Section #':        sec['Section #']        || '',
-              'Position':         sec['Position']         || '',
-              'L*':               sec['L*']               || '',
-              'a*':               sec['a*']               || '',
-              'b*':               sec['b*']               || '',
-              '\u0394E00':        sec['\u0394E00']        || '',
-              '\u0394L*':         sec['\u0394L*']         || '',
-              '\u0394a*':         sec['\u0394a*']         || '',
-              '\u0394b*':         sec['\u0394b*']         || '',
-              'Judgement':        sec['Judgement']        || '',
-              'Group Traits':     sec['Group Traits']     || '',
-              'Notes':            sec['Notes']            || '',
-              'Completeness':     completeness
-            };
-            masterRows.push(row);
-          }
-        } else {
-          // Plate has scan but no LAB — add stub row
+      // Process lib records first
+      var libPids = Object.keys(libMap);
+      for (var k = 0; k < libPids.length; k++) {
+        var libPid = libPids[k];
+        if (processed[libPid]) continue;
+        processed[libPid] = true;
+        var regMatch = findRegMatch(libPid);
+        var reg = regMatch ? regMap[regMatch.pid] : {};
+        var matchType = regMatch ? regMatch.type : null;
+        if (regMatch) completeCount++; else incompleteCount++;
+        if (matchType === 'fuzzy') fuzzyCount++;
+        var completeness = regMatch ? (matchType === 'fuzzy' ? '\u26a0 Fuzzy Match' : 'Complete') : '\u26a0 No Scan Tag';
+        var sections = libMap[libPid];
+        for (var s = 0; s < sections.length; s++) {
+          var sec = sections[s];
           masterRows.push({
-            'Plate ID': pid, 'Plate Name': reg['Plate Name'] || '',
-            'Series / Project': reg['Series / Project'] || '',
-            'Plate Type': reg['Plate Type'] || '', 'Date / Batch': reg['Date / Batch'] || '',
-            'Substrate / Base': reg['Substrate / Base'] || '', 'Status': reg['Status'] || '',
-            'Image File': reg['Image File'] || '', 'Drive Link': reg['Drive Link'] || '',
-            'Section': '', 'Section #': '', 'Position': '', 'L*': '', 'a*': '', 'b*': '',
-            '\u0394E00': '', '\u0394L*': '', '\u0394a*': '', '\u0394b*': '',
-            'Judgement': '', 'Group Traits': '', 'Notes': '', 'Completeness': completeness
+            'Plate ID': libPid,
+            'Plate Name':       (reg['Plate Name']       || sec['Plate Name']       || ''),
+            'Series / Project': (reg['Series / Project'] || sec['Series / Project'] || ''),
+            'Plate Type':       (reg['Plate Type']       || sec['Plate Type']       || ''),
+            'Date / Batch':     reg['Date / Batch']     || '',
+            'Substrate / Base': reg['Substrate / Base'] || '',
+            'Status':           reg['Status']           || '',
+            'Image File':       reg['Image File']       || '',
+            'Drive Link':       reg['Drive Link']       || '',
+            'Section':    sec['Section']    || '', 'Section #': sec['Section #'] || '',
+            'Position':   sec['Position']   || '',
+            'L*': sec['L*'] || '', 'a*': sec['a*'] || '', 'b*': sec['b*'] || '',
+            '\u0394E00': sec['\u0394E00'] || '', '\u0394L*': sec['\u0394L*'] || '',
+            '\u0394a*':  sec['\u0394a*']  || '', '\u0394b*': sec['\u0394b*'] || '',
+            'Judgement':    sec['Judgement']    || '',
+            'Group Traits': sec['Group Traits'] || '',
+            'Notes':        sec['Notes']        || '',
+            'Completeness': completeness
           });
         }
       }
 
-      mlog('\u2713 ' + masterRows.length + ' merged rows (' + completeCount + ' complete, ' + incompleteCount + ' incomplete)', 'l-ok');
+      // Process registry records with no lib match
+      var regPids = Object.keys(regMap);
+      for (var m2 = 0; m2 < regPids.length; m2++) {
+        var regPid = regPids[m2];
+        var libMatch = findLibMatch(regPid);
+        if (libMatch && processed[libMatch.pid]) continue;
+        processed[regPid] = true;
+        incompleteCount++;
+        var rr = regMap[regPid];
+        masterRows.push({
+          'Plate ID': regPid, 'Plate Name': rr['Plate Name'] || '',
+          'Series / Project': rr['Series / Project'] || '',
+          'Plate Type': rr['Plate Type'] || '', 'Date / Batch': rr['Date / Batch'] || '',
+          'Substrate / Base': rr['Substrate / Base'] || '', 'Status': rr['Status'] || '',
+          'Image File': rr['Image File'] || '', 'Drive Link': rr['Drive Link'] || '',
+          'Section': '', 'Section #': '', 'Position': '',
+          'L*': '', 'a*': '', 'b*': '',
+          '\u0394E00': '', '\u0394L*': '', '\u0394a*': '', '\u0394b*': '',
+          'Judgement': '', 'Group Traits': '', 'Notes': '', 'Completeness': '\u26a0 No LAB Data'
+        });
+      }
+
+      var totalPlates = completeCount + incompleteCount;
+      var fuzzyMsg = fuzzyCount > 0 ? ', ' + fuzzyCount + ' fuzzy' : '';
+      mlog('\u2713 ' + masterRows.length + ' merged rows (' + completeCount + ' complete' + fuzzyMsg + ', ' + incompleteCount + ' incomplete)', 'l-ok');
+      if (fuzzyCount > 0) mlog('\u26a0 ' + fuzzyCount + ' fuzzy match' + (fuzzyCount > 1 ? 'es' : '') + ' found \u2014 review Completeness column', 'l-warn');
 
       // Update stats
-      document.getElementById('masterTotal').textContent = pids.length;
+      document.getElementById('masterTotal').textContent = totalPlates;
       document.getElementById('masterComplete').textContent = completeCount + ' complete';
       document.getElementById('masterIncomplete').textContent = incompleteCount + ' incomplete';
       document.getElementById('masterResults').style.display = 'block';
